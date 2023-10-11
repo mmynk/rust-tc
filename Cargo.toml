@@ -1,0 +1,11 @@
+[package]
+name = "rust-tc"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+thiserror = "1.0"
+netlink-packet-route = "0.17"
+netlink-packet-core = "0.7"
+netlink-sys = "0.8"
+netlink-packet-utils = "0.5"
