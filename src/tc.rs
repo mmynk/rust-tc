@@ -2,10 +2,13 @@ use netlink_packet_route::tc as netlink_tc;
 use netlink_packet_utils::{nla, Parseable};
 
 use crate::{
-    constants::FQ_CODEL,
+    constants::{CLSACT, FQ_CODEL},
     errors::TcError,
     netlink,
-    qdiscs::fq_codel::{FqCodel, FqCodelXStats},
+    qdiscs::{
+        clsact::Clsact,
+        fq_codel::{FqCodel, FqCodelXStats},
+    },
     types::*,
 };
 
@@ -53,6 +56,7 @@ fn parse_qdiscs(attr: &mut Attribute, opts: Vec<&nla::DefaultNla>) {
         let kind = kind.as_str();
         match kind {
             FQ_CODEL => attr.qdisc = Some(QDisc::FqCodel(FqCodel::new(opts))),
+            CLSACT => attr.qdisc = Some(QDisc::Clsact(Clsact {})),
             _ => (),
         }
     }
