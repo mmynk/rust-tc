@@ -3,11 +3,10 @@ mod errors;
 mod netlink;
 mod qdiscs;
 mod tc;
+mod types;
 
-use std::collections::BTreeMap;
+use types::Tc;
 
-use tc::Tc;
-
-pub fn tc_stats() -> Result<BTreeMap<u32, Vec<Tc>>, errors::TcError> {
+pub fn tc_stats() -> Result<Vec<Tc>, errors::TcError> {
     tc::tc_stats()
 }

@@ -4,11 +4,13 @@ use rust_tc::tc_stats;
 fn test_get_qdiscs() {
     let result = tc_stats();
     assert!(result.is_ok());
-    let tc_map = result.unwrap();
-    for (_, tcs) in tc_map {
-        for tc in tcs {
-            assert!(tc.kind.is_some());
-            assert!(tc.stats.is_some());
-        }
+    let tcs = result.unwrap();
+    for tc in tcs {
+        println!("tc: {:?}", tc);
+
+        let attr = tc.attr;
+        assert!(attr.kind.is_some());
+        assert!(attr.stats.is_some());
+        assert!(attr.stats2.is_some());
     }
 }
