@@ -30,7 +30,7 @@ fn send_get_qdisc_request(socket: &Socket) -> Result<(), TcError> {
 
     match socket.send(&buf[..], 0) {
         Ok(_) => Ok(()),
-        Err(e) => return Err(TcError::Send(e.to_string()).into()),
+        Err(e) => Err(TcError::Send(e.to_string())),
     }
 }
 
@@ -50,15 +50,10 @@ pub fn get_qdiscs() -> Result<Vec<TcMessage>, TcError> {
 
             let payload = rx_packet.payload;
             match payload {
-                NetlinkPayload::InnerMessage(message) => match message {
-                    RtnlMessage::NewQueueDiscipline(message) => {
-                        tc_messages.push(message.clone());
-                    }
-                    _ => {}
-                },
-                NetlinkPayload::Error(error) => {
-                    return Err(TcError::Netlink(error.to_string()).into())
+                NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(message)) => {
+                    tc_messages.push(message.clone())
                 }
+                NetlinkPayload::Error(error) => return Err(TcError::Netlink(error.to_string())),
                 NetlinkPayload::Done(_) => return Ok(tc_messages),
                 _ => {}
             }

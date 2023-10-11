@@ -103,19 +103,16 @@ fn unmarshal_fq_codel_xstats(bytes: [u8; 40]) -> FqCodelXStats {
 
     let buf: [u8; 4] = bytes[..4].try_into().unwrap();
     let kind = u32::from_ne_bytes(buf);
-    match kind {
-        0 => {
-            fq.maxpacket = u32::from_ne_bytes(bytes[4..8].try_into().unwrap());
-            fq.drop_overlimit = u32::from_ne_bytes(bytes[8..12].try_into().unwrap());
-            fq.ecn_mark = u32::from_ne_bytes(bytes[12..16].try_into().unwrap());
-            fq.new_flow_count = u32::from_ne_bytes(bytes[16..20].try_into().unwrap());
-            fq.new_flows_len = u32::from_ne_bytes(bytes[20..24].try_into().unwrap());
-            fq.old_flows_len = u32::from_ne_bytes(bytes[24..28].try_into().unwrap());
-            fq.ce_mark = u32::from_ne_bytes(bytes[28..32].try_into().unwrap());
-            fq.memory_usage = u32::from_ne_bytes(bytes[32..36].try_into().unwrap());
-            fq.drop_overmemory = u32::from_ne_bytes(bytes[36..40].try_into().unwrap());
-        }
-        _ => (),
+    if kind == 0 {
+        fq.maxpacket = u32::from_ne_bytes(bytes[4..8].try_into().unwrap());
+        fq.drop_overlimit = u32::from_ne_bytes(bytes[8..12].try_into().unwrap());
+        fq.ecn_mark = u32::from_ne_bytes(bytes[12..16].try_into().unwrap());
+        fq.new_flow_count = u32::from_ne_bytes(bytes[16..20].try_into().unwrap());
+        fq.new_flows_len = u32::from_ne_bytes(bytes[20..24].try_into().unwrap());
+        fq.old_flows_len = u32::from_ne_bytes(bytes[24..28].try_into().unwrap());
+        fq.ce_mark = u32::from_ne_bytes(bytes[28..32].try_into().unwrap());
+        fq.memory_usage = u32::from_ne_bytes(bytes[32..36].try_into().unwrap());
+        fq.drop_overmemory = u32::from_ne_bytes(bytes[36..40].try_into().unwrap());
     }
 
     fq

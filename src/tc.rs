@@ -10,7 +10,7 @@ use crate::{
     qdiscs::fq_codel::{FqCodel, FqCodelXStats},
 };
 
-#[derive(Clone, Debug, Default)]
+#[derive(Default)]
 pub struct Stats {
     // Stats2::StatsBasic
     bytes: u64,
@@ -30,24 +30,22 @@ pub struct Stats {
     pps: u32,
 }
 
-#[derive(Clone, Debug)]
 pub enum QDisc {
     FqCodel(FqCodel),
 }
 
-#[derive(Clone, Debug)]
 pub enum XStats {
     FqCodel(FqCodelXStats),
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Default)]
 pub struct Tc {
-    handle: u32,
-    parent: u32,
-    kind: Option<String>,
-    stats: Option<Stats>,
-    // backlog: Option<Backlog>,
-    qdisc: Option<QDisc>,
+    pub handle: u32,
+    pub parent: u32,
+    pub kind: Option<String>,
+    pub stats: Option<Stats>,
+    // pub backlog: Option<Backlog>,
+    pub qdisc: Option<QDisc>,
 }
 
 fn parse_stats(tc: &mut Tc, tc_stats: &netlink_tc::Stats) {
