@@ -42,8 +42,8 @@ pub enum XStats {
 
 #[derive(Clone, Debug, Default)]
 pub struct Tc {
-    handle: Option<u32>,
-    parent: Option<u32>,
+    handle: u32,
+    parent: u32,
     kind: Option<String>,
     stats: Option<Stats>,
     // backlog: Option<Backlog>,
@@ -109,7 +109,11 @@ pub fn tc_stats() -> Result<BTreeMap<u32, Vec<Tc>>, TcError> {
     let mut tc_map = BTreeMap::new();
 
     for message in &messages {
-        let mut tc = Tc::default();
+        let mut tc = Tc {
+            handle: message.header.handle,
+            parent: message.header.parent,
+            ..Default::default()
+        };
         let mut opts: Vec<&nla::DefaultNla> = vec![];
         let mut xstats = Vec::new();
 

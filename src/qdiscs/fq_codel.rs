@@ -1,5 +1,3 @@
-// use netlink_packet_route::tc;
-
 use netlink_packet_utils::nla::{self, Nla};
 
 use crate::constants::ATTR_LEN;
