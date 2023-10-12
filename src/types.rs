@@ -1,4 +1,7 @@
-use crate::qdiscs::fq_codel::{FqCodel, FqCodelXStats};
+use crate::qdiscs::{
+    clsact::Clsact,
+    fq_codel::{FqCodel, FqCodelXStats},
+};
 
 #[derive(Debug, Default)]
 pub struct Tc {
@@ -59,6 +62,7 @@ pub struct Stats2 {
 #[derive(Debug)]
 pub enum QDisc {
     FqCodel(FqCodel),
+    Clsact(Clsact),
 }
 
 #[derive(Debug)]
