@@ -5,7 +5,8 @@ mod qdiscs;
 mod tc;
 mod types;
 
-use types::Tc;
+pub use qdiscs::*;
+pub use types::*;
 
 pub fn tc_stats() -> Result<Vec<Tc>, errors::TcError> {
     tc::tc_stats()

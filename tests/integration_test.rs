@@ -1,4 +1,4 @@
-use rust_tc::tc_stats;
+use tc::tc_stats;
 
 #[test]
 fn test_get_qdiscs() {

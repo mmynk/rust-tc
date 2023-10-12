@@ -4,15 +4,15 @@ use crate::constants::ATTR_LEN;
 
 #[derive(Clone, Debug, Default)]
 pub struct FqCodel {
-    target: u32,
-    limit: u32,
-    interval: u32,
-    ecn: u32,
-    flows: u32,
-    quantum: u32,
-    ce_threshold: u32,
-    drop_batch_size: u32,
-    memory_limit: u32,
+    pub target: u32,
+    pub limit: u32,
+    pub interval: u32,
+    pub ecn: u32,
+    pub flows: u32,
+    pub quantum: u32,
+    pub ce_threshold: u32,
+    pub drop_batch_size: u32,
+    pub memory_limit: u32,
 }
 
 impl FqCodel {
@@ -23,15 +23,15 @@ impl FqCodel {
 
 #[derive(Clone, Debug, Default)]
 pub struct FqCodelXStats {
-    maxpacket: u32,
-    drop_overlimit: u32,
-    ecn_mark: u32,
-    new_flow_count: u32,
-    new_flows_len: u32,
-    old_flows_len: u32,
-    ce_mark: u32,
-    memory_usage: u32,
-    drop_overmemory: u32,
+    pub maxpacket: u32,
+    pub drop_overlimit: u32,
+    pub ecn_mark: u32,
+    pub new_flow_count: u32,
+    pub new_flows_len: u32,
+    pub old_flows_len: u32,
+    pub ce_mark: u32,
+    pub memory_usage: u32,
+    pub drop_overmemory: u32,
 }
 
 impl FqCodelXStats {
