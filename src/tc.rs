@@ -4,7 +4,7 @@ use netlink_packet_utils::{nla, Parseable};
 use crate::{
     constants::{CLSACT, FQ_CODEL},
     errors::TcError,
-    netlink::{self, NetlinkConnection},
+    netlink,
     qdiscs::{
         clsact::Clsact,
         fq_codel::{FqCodel, FqCodelXStats},

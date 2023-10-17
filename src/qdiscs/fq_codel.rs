@@ -2,7 +2,7 @@ use netlink_packet_utils::nla::{self, Nla};
 
 use crate::constants::ATTR_LEN;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct FqCodel {
     pub target: u32,
     pub limit: u32,
@@ -21,7 +21,7 @@ impl FqCodel {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct FqCodelXStats {
     pub maxpacket: u32,
     pub drop_overlimit: u32,

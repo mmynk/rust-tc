@@ -22,13 +22,14 @@ pub trait NetlinkConnection {
 
 /// A struct for communicating with the kernel via netlink.
 pub struct Netlink {
-    socket: Socket
+    socket: Socket,
 }
 
 impl NetlinkConnection for Netlink {
     fn new() -> Result<Self, TcError>
     where
-        Self: Sized {
+        Self: Sized,
+    {
         let socket = Socket::new(NETLINK_ROUTE).map_err(|err| TcError::Socket(Box::new(err)))?;
         socket
             .connect(&SocketAddr::new(0, 0))
@@ -53,7 +54,9 @@ impl NetlinkConnection for Netlink {
                     NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(message)) => {
                         tc_messages.push(message.clone())
                     }
-                    NetlinkPayload::Error(error) => return Err(TcError::Netlink(error.to_string())),
+                    NetlinkPayload::Error(error) => {
+                        return Err(TcError::Netlink(error.to_string()))
+                    }
                     NetlinkPayload::Done(_) => return Ok(tc_messages),
                     _ => {}
                 }
