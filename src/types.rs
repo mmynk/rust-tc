@@ -59,13 +59,13 @@ pub struct Stats2 {
     // pub app: Option<StatsApp>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum QDisc {
     FqCodel(FqCodel),
     Clsact(Clsact),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum XStats {
     FqCodel(FqCodelXStats),
 }

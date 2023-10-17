@@ -76,8 +76,8 @@ fn parse_xstats(attr: &mut Attribute, bytes: Vec<u8>) {
     }
 }
 
-pub fn tc_stats() -> Result<Vec<Tc>, TcError> {
-    let messages = netlink::get_qdiscs()?;
+pub fn tc_stats<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
+    let messages = T::new()?.qdiscs()?;
     let mut tcs = Vec::new();
 
     for message in &messages {
