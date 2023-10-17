@@ -5,6 +5,7 @@ mod qdiscs;
 mod tc;
 mod types;
 
+pub use netlink::*;
 pub use qdiscs::*;
 pub use types::*;
 
