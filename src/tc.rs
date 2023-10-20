@@ -5,12 +5,13 @@ use crate::{
     class::htb::Htb,
     constants::*,
     errors::TcError,
-    netlink,
+    links, netlink,
     qdiscs::{
         clsact::Clsact,
         fq_codel::{FqCodel, FqCodelXStats},
     },
-    types::*, HtbXstats, links,
+    types::*,
+    HtbXstats,
 };
 
 fn parse_stats(attr: &mut Attribute, tc_stats: &netlink_tc::Stats) {
@@ -92,11 +93,9 @@ fn parse_xstats(attr: &mut Attribute, bytes: Vec<u8>) -> Result<(), TcError> {
         let kind = kind.as_str();
         attr.xstats = match kind {
             FQ_CODEL => FqCodelXStats::new(&bytes)
-                            .and_then(|x| Ok(XStats::FqCodel(x)))
-                            .ok(),
-            HTB => HtbXstats::new(&bytes)
-                        .and_then(|x| Ok(XStats::Htb(x)))
-                        .ok(),
+                .and_then(|x| Ok(XStats::FqCodel(x)))
+                .ok(),
+            HTB => HtbXstats::new(&bytes).and_then(|x| Ok(XStats::Htb(x))).ok(),
             _ => None,
         }
     }

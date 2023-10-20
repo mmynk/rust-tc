@@ -1,4 +1,4 @@
-use netlink_packet_route::{tc, TcHeader, TcMessage, LinkMessage};
+use netlink_packet_route::{tc, LinkMessage, TcHeader, TcMessage};
 use netlink_packet_utils::{nla, Parseable};
 
 use crate::{errors::NetlinkError, netlink::NetlinkConnection};
@@ -155,8 +155,8 @@ impl NetlinkConnection for MockNetlink {
             tc::nlas::Nla::HwOffload(0),
             tc::nlas::Nla::Stats2(vec![
                 tc::nlas::Stats2::StatsApp(vec![
-                    0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 ]),
                 tc::nlas::Stats2::StatsBasic(vec![
                     76, 222, 96, 2, 0, 0, 0, 0, // bytes
@@ -186,8 +186,8 @@ impl NetlinkConnection for MockNetlink {
                 tc::nlas::Stats::parse(&stats_buf).unwrap()
             }),
             tc::nlas::Nla::XStats(vec![
-                0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             ]),
         ];
         messages.push(TcMessage::from_parts(header, nlas));
@@ -272,7 +272,10 @@ impl NetlinkConnection for MockNetlink {
             tc::nlas::Nla::Kind("htb".to_string()),
             tc::nlas::Nla::Options(vec![tc::nlas::TcOpt::Other(nla::DefaultNla::new(
                 1,
-                vec![0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0, 64, 13, 3, 0, 64, 13, 3, 0, 212, 48, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0]
+                vec![
+                    0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0,
+                    64, 13, 3, 0, 64, 13, 3, 0, 212, 48, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0,
+                ],
             ))]),
             tc::nlas::Nla::Stats2(vec![
                 tc::nlas::Stats2::StatsBasic(vec![
@@ -288,8 +291,8 @@ impl NetlinkConnection for MockNetlink {
                     0, 0, 0, 0, // overlimits
                 ]),
                 tc::nlas::Stats2::StatsApp(vec![
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13, 3, 0
-                ])
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13, 3, 0,
+                ]),
             ]),
             tc::nlas::Nla::Stats({
                 let buf = [
@@ -310,7 +313,7 @@ impl NetlinkConnection for MockNetlink {
                 0, 0, 0, 0, // borrows
                 0, 0, 0, 0, // giants
                 64, 13, 3, 0, // tokens
-                64, 13, 3, 0 // ctokens
+                64, 13, 3, 0, // ctokens
             ]),
         ];
         messages.push(TcMessage::from_parts(header, nlas));
@@ -461,37 +464,40 @@ fn test_htb() {
 
     // class
     let htb = tc.attr.class.as_ref().unwrap();
-    assert_eq!(htb, &Class::Htb(Htb {
-        parms: Some(HtbOpt {
-            rate: RateSpec {
-                cell_log: 0,
-                linklayer: 1,
-                overhead: 0,
-                cell_align: 0,
-                mpu: 0,
-                rate: 125000,
-            },
-            ceil: RateSpec {
-                cell_log: 0,
-                linklayer: 1,
-                overhead: 0,
-                cell_align: 0,
-                mpu: 0,
-                rate: 125000,
-            },
-            buffer: 200000,
-            cbuffer: 200000,
-            quantum: 12500,
-            level: 7,
-            prio: 0,
-        }),
-        init: None,
-        ctab: vec![],
-        rtab: vec![],
-        direct_qlen: 0,
-        rate64: 0,
-        ceil64: 0,
-    }));
+    assert_eq!(
+        htb,
+        &Class::Htb(Htb {
+            parms: Some(HtbOpt {
+                rate: RateSpec {
+                    cell_log: 0,
+                    linklayer: 1,
+                    overhead: 0,
+                    cell_align: 0,
+                    mpu: 0,
+                    rate: 125000,
+                },
+                ceil: RateSpec {
+                    cell_log: 0,
+                    linklayer: 1,
+                    overhead: 0,
+                    cell_align: 0,
+                    mpu: 0,
+                    rate: 125000,
+                },
+                buffer: 200000,
+                cbuffer: 200000,
+                quantum: 12500,
+                level: 7,
+                prio: 0,
+            }),
+            init: None,
+            ctab: vec![],
+            rtab: vec![],
+            direct_qlen: 0,
+            rate64: 0,
+            ceil64: 0,
+        })
+    );
     // xstats
     let xstats = tc.attr.xstats.as_ref().unwrap();
     assert_eq!(

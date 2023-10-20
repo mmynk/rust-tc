@@ -111,9 +111,13 @@ fn unmarshal_fq_codel(nlas: Vec<&nla::DefaultNla>) -> FqCodel {
 
 fn unmarshal_fq_codel_xstats(bytes: &[u8]) -> Result<FqCodelXStats, TcError> {
     if bytes.len() < 40 {
-        return Err(TcError::InvalidAttribute("FqCodel XStats requires 40 bytes".to_string()));
+        return Err(TcError::InvalidAttribute(
+            "FqCodel XStats requires 40 bytes".to_string(),
+        ));
     }
-    let buf: [u8; 4] = bytes[..4].try_into().map_err(|_| TcError::Decode("Failed to extract FqCodel XStats kind".to_string()))?;
+    let buf: [u8; 4] = bytes[..4]
+        .try_into()
+        .map_err(|_| TcError::Decode("Failed to extract FqCodel XStats kind".to_string()))?;
     let kind = u32::from_ne_bytes(buf);
     if kind == 0 {
         bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))

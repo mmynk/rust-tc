@@ -1,7 +1,7 @@
 use netlink_packet_core::{
     NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP, NLM_F_REQUEST,
 };
-use netlink_packet_route::{RtnlMessage, TcHeader, TcMessage, LinkMessage};
+use netlink_packet_route::{LinkMessage, RtnlMessage, TcHeader, TcMessage};
 use netlink_sys::{protocols::NETLINK_ROUTE, Socket, SocketAddr};
 
 use crate::errors::NetlinkError;
@@ -36,7 +36,8 @@ impl NetlinkConnection for Netlink {
     where
         Self: Sized,
     {
-        let socket = Socket::new(NETLINK_ROUTE).map_err(|err| NetlinkError::Socket(Box::new(err)))?;
+        let socket =
+            Socket::new(NETLINK_ROUTE).map_err(|err| NetlinkError::Socket(Box::new(err)))?;
         socket
             .connect(&SocketAddr::new(0, 0))
             .map_err(|err| NetlinkError::Socket(Box::new(err)))?;

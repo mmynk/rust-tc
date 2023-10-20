@@ -1,4 +1,4 @@
-use tc::{classes, qdiscs, links, Netlink};
+use tc::{classes, links, qdiscs, Netlink};
 
 #[test]
 fn test_get_qdiscs() {

@@ -1,6 +1,6 @@
 use netlink_packet_route::nlas::link::Nla;
 
-use crate::{netlink, Link, errors::LinkError};
+use crate::{errors::LinkError, netlink, Link};
 
 /// `links` parses `LinkMessage`s into `Link`s and returns them.
 pub fn links<T: netlink::NetlinkConnection>() -> Result<Vec<Link>, LinkError> {
@@ -21,9 +21,10 @@ pub fn links<T: netlink::NetlinkConnection>() -> Result<Vec<Link>, LinkError> {
         }
 
         if name.is_none() {
-            return Err(LinkError::MissingAttribute("Interface name not found".to_string()));
+            return Err(LinkError::MissingAttribute(
+                "Interface name not found".to_string(),
+            ));
         }
-
 
         links.push(Link {
             index,
