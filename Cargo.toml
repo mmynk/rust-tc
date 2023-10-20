@@ -6,8 +6,10 @@ edition = "2021"
 description = "A Rust library for interacting with the Linux Traffic Control (tc) subsystem using Netlink"
 
 [dependencies]
-thiserror = "1.0"
+bincode = "1"
 netlink-packet-route = "0.17"
 netlink-packet-core = "0.7"
 netlink-sys = "0.8"
 netlink-packet-utils = "0.5"
+serde = { version = "1", features = ["derive"] }
+thiserror = "1.0"

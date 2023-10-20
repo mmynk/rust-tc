@@ -1,7 +1,17 @@
 use netlink_packet_utils::nla::{self, Nla};
+use serde::{Deserialize, Serialize};
 
-use crate::constants::ATTR_LEN;
+use crate::{constants::ATTR_LEN, errors::TcError};
 
+/// FQ_Codel (Fair Queuing Controlled Delay) is queuing discipline
+/// that combines Fair Queuing with the CoDel AQM scheme.
+/// FQ_Codel uses a stochastic model to classify incoming packets into
+/// different flows and is used to provide a fair share of the
+/// bandwidth to all the flows using the queue.
+/// Each such flow is managed by the CoDel queuing discipline.
+/// Reordering within a flow is avoided since Codel internally uses a FIFO queue.
+///
+/// Defined in `include/uapi/linux/sch_fq_codel.c`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FqCodel {
     pub target: u32,
@@ -21,7 +31,8 @@ impl FqCodel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+/// Defined in `include/uapi/linux/pkt_sched.h` as `struct tc_fq_codel_xstats`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FqCodelXStats {
     pub maxpacket: u32,
     pub drop_overlimit: u32,
@@ -35,7 +46,7 @@ pub struct FqCodelXStats {
 }
 
 impl FqCodelXStats {
-    pub fn new(bytes: [u8; 40]) -> Self {
+    pub fn new(bytes: &[u8]) -> Result<Self, TcError> {
         unmarshal_fq_codel_xstats(bytes)
     }
 }
@@ -98,22 +109,21 @@ fn unmarshal_fq_codel(nlas: Vec<&nla::DefaultNla>) -> FqCodel {
     fq
 }
 
-fn unmarshal_fq_codel_xstats(bytes: [u8; 40]) -> FqCodelXStats {
-    let mut fq = FqCodelXStats::default();
-
-    let buf: [u8; 4] = bytes[..4].try_into().unwrap();
+fn unmarshal_fq_codel_xstats(bytes: &[u8]) -> Result<FqCodelXStats, TcError> {
+    if bytes.len() < 40 {
+        return Err(TcError::InvalidAttribute(
+            "FqCodel XStats requires 40 bytes".to_string(),
+        ));
+    }
+    let buf: [u8; 4] = bytes[..4]
+        .try_into()
+        .map_err(|_| TcError::Decode("Failed to extract FqCodel XStats kind".to_string()))?;
     let kind = u32::from_ne_bytes(buf);
     if kind == 0 {
-        fq.maxpacket = u32::from_ne_bytes(bytes[4..8].try_into().unwrap());
-        fq.drop_overlimit = u32::from_ne_bytes(bytes[8..12].try_into().unwrap());
-        fq.ecn_mark = u32::from_ne_bytes(bytes[12..16].try_into().unwrap());
-        fq.new_flow_count = u32::from_ne_bytes(bytes[16..20].try_into().unwrap());
-        fq.new_flows_len = u32::from_ne_bytes(bytes[20..24].try_into().unwrap());
-        fq.old_flows_len = u32::from_ne_bytes(bytes[24..28].try_into().unwrap());
-        fq.ce_mark = u32::from_ne_bytes(bytes[28..32].try_into().unwrap());
-        fq.memory_usage = u32::from_ne_bytes(bytes[32..36].try_into().unwrap());
-        fq.drop_overmemory = u32::from_ne_bytes(bytes[36..40].try_into().unwrap());
+        bincode::deserialize(&bytes[4..]).map_err(|e| TcError::UnmarshalStruct(e))
+    } else {
+        Err(TcError::InvalidAttribute(format!(
+            "FqCodel XStats has unidentified kind: {kind}"
+        )))
     }
-
-    fq
 }
