@@ -108,6 +108,7 @@ pub fn qdiscs<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
     let mut tcs = Vec::new();
 
     let messages = T::new()?.qdiscs()?;
+    // println!("messages: {:?}", messages);
     for message in &messages {
         let tc = TcMessage {
             index: message.header.index as u32,
@@ -143,7 +144,6 @@ pub fn qdiscs<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
                         }
                     }
                 }
-                // netlink_tc::Nla::QDisc(q_disc) => parse_qdisc(&mut tc, q_disc),
                 netlink_tc::Nla::XStats(bytes) => xstats = bytes.clone(),
                 _ => (),
             }
