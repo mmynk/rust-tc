@@ -1,4 +1,4 @@
-use netlink_packet_route::{tc, LinkMessage, TcHeader, TcMessage};
+use netlink_packet_route::{nlas, tc, LinkMessage, TcHeader, TcMessage};
 use netlink_packet_utils::{nla, Parseable};
 
 use crate::{errors::NetlinkError, netlink::NetlinkConnection};
@@ -193,10 +193,10 @@ impl NetlinkConnection for MockNetlink {
         messages.push(TcMessage::from_parts(header, nlas));
 
         // htb
-        // TcMessage { header: TcHeader { family: 0, index: 6, handle: 65536, parent: 4294967295, info: 2 }, nlas: [Kind("htb"), Options([Other(DefaultNla { kind: 2, value: [17, 0, 3, 0, 10, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }), Other(DefaultNla { kind: 5, value: [232, 3, 0, 0] })]), HwOffload(0), Stats2([StatsBasic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), StatsQueue([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])]), Stats(Stats { bytes: 0, packets: 0, drops: 0, overlimits: 0, bps: 0, pps: 0, qlen: 0, backlog: 0 })] }
+        // TcMessage { header: TcHeader { family: 0, index: 3, handle: 65536, parent: 4294967295, info: 2 }, nlas: [Kind("htb"), Options([Other(DefaultNla { kind: 2, value: [17, 0, 3, 0, 10, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }), Other(DefaultNla { kind: 5, value: [232, 3, 0, 0] })]), HwOffload(0), Stats2([StatsBasic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), StatsQueue([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])]), Stats(Stats { bytes: 0, packets: 0, drops: 0, overlimits: 0, bps: 0, pps: 0, qlen: 0, backlog: 0 })] }
         let header = TcHeader {
             family: 0,
-            index: 6,
+            index: 3,
             handle: 65536,
             parent: 4294967295,
             info: 2,
@@ -322,7 +322,10 @@ impl NetlinkConnection for MockNetlink {
     }
 
     fn links(&self) -> Result<Vec<LinkMessage>, NetlinkError> {
-        Ok(Vec::new())
+        let mut msg = LinkMessage::default();
+        msg.header.index = 3;
+        msg.nlas = vec![nlas::link::Nla::IfName("eth0".to_string())];
+        Ok(vec![msg])
     }
 }
 
@@ -430,7 +433,7 @@ fn test_htb() {
 
     let tc = tc_stats.get(3).unwrap();
     // message
-    assert_eq!(tc.msg.index, 6);
+    assert_eq!(tc.msg.index, 3);
     assert_eq!(tc.msg.handle, 65536);
     assert_eq!(tc.msg.parent, 4294967295);
     // attr
