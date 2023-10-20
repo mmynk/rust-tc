@@ -12,3 +12,9 @@ fn test_get_qdiscs() {
         assert!(attr.stats2.is_some());
     }
 }
+
+#[test]
+fn test_get_links() {
+    let result = links::<Netlink>();
+    assert!(result.is_ok());
+}

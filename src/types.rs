@@ -65,7 +65,14 @@ pub enum QDisc {
     Clsact(Clsact),
 }
 
+}
+
 #[derive(Debug, PartialEq)]
 pub enum XStats {
     FqCodel(FqCodelXStats),
+/// A subset of structs defined in `include/uapi/linux/if_link.h`.
+#[derive(Debug)]
+pub struct Link {
+    pub index: u32,
+    pub name: String,
 }
