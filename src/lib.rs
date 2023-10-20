@@ -32,8 +32,13 @@ pub fn classes() -> Result<Vec<Tc>, errors::TcError> {
 }
 
 /// Get list of all `tc` classes for a given interface.
-pub fn class(index: u32) -> Result<Vec<Tc>, errors::TcError> {
-    nl_class::<Netlink>(index)
+pub fn class(name: &str) -> Result<Vec<Tc>, errors::TcError> {
+    nl_class::<Netlink>(name)
+}
+
+/// Get list of all `tc` classes for a given interface index.
+pub fn class_for_index(index: u32) -> Result<Vec<Tc>, errors::TcError> {
+    nl_class_for_index::<Netlink>(index)
 }
 
 fn nl_tc_stats<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, errors::TcError> {
@@ -44,9 +49,12 @@ fn nl_qdiscs<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, errors::TcError
     tc::qdiscs::<T>()
 }
 
+fn nl_class<T: netlink::NetlinkConnection>(name: &str) -> Result<Vec<Tc>, errors::TcError> {
+    tc::class::<T>(name)
+}
 
-fn nl_class<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<Tc>, errors::TcError> {
-    tc::class::<T>(index)
+fn nl_class_for_index<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<Tc>, errors::TcError> {
+    tc::class_for_index::<T>(index)
 }
 
 fn nl_classes<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, errors::TcError> {

@@ -12,12 +12,12 @@ use tc;
 fn main() {
     // Get list of qdiscs
     let qdiscs = tc::qdiscs().unwrap();
-    
+
     // Get list of classes
     let classes = tc::class().unwrap();
-    
+
     // Get class for given interface
-    let class = tc::class(0).unwrap();
+    let class = tc::class("eth0").unwrap();
 }
 ```
 

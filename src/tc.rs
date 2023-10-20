@@ -159,9 +159,9 @@ pub fn qdiscs<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
     Ok(tcs)
 }
 
-/// `class` returns a list of all classes for a given interface.
+/// `class_for_index` returns a list of all classes for a given interface index.
 /// The underlying implementation makes a netlink call with the `RTM_GETCLASS` command.
-pub fn class<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<Tc>, TcError> {
+pub fn class_for_index<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<Tc>, TcError> {
     let mut tcs = Vec::new();
 
     let messages = T::new()?.classes(index as i32)?;
@@ -213,6 +213,20 @@ pub fn class<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<Tc>, TcErr
     Ok(tcs)
 }
 
+/// `class` returns a list of all classes for a given interface name.
+/// It retrieves the list of links and then calls `class_for_index`
+/// for the link with the matching name.
+pub fn class<T: netlink::NetlinkConnection>(name: &str) -> Result<Vec<Tc>, TcError> {
+    let links = link::links::<T>()?;
+
+    if let Some(link) = links.iter().find(|link| link.name == name) {
+        class_for_index::<T>(link.index)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+
 /// `classes` returns a list of all classes on the system.
 /// It retrieves the list of links and then calls `classes` for each link.
 pub fn classes<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
@@ -220,7 +234,7 @@ pub fn classes<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
 
     let links = link::links::<T>()?;
     for link in links {
-        tcs.append(&mut class::<T>(link.index)?);
+        tcs.append(&mut class_for_index::<T>(link.index)?);
     }
 
     Ok(tcs)
