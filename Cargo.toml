@@ -4,6 +4,7 @@ version = "0.0.1"
 authors = ["Mohit Mayank"]
 edition = "2021"
 description = "A Rust library for interacting with the Linux Traffic Control (tc) subsystem using Netlink"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 bincode = "1"
