@@ -53,7 +53,9 @@ fn nl_class<T: netlink::NetlinkConnection>(name: &str) -> Result<Vec<Tc>, errors
     tc::class::<T>(name)
 }
 
-fn nl_class_for_index<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<Tc>, errors::TcError> {
+fn nl_class_for_index<T: netlink::NetlinkConnection>(
+    index: u32,
+) -> Result<Vec<Tc>, errors::TcError> {
     tc::class_for_index::<T>(index)
 }
 

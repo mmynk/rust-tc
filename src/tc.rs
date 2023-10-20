@@ -5,12 +5,11 @@ use crate::{
     class::htb::Htb,
     constants::*,
     errors::TcError,
-    netlink,
+    link, netlink,
     qdiscs::{
         clsact::Clsact,
         fq_codel::{FqCodel, FqCodelXStats},
     },
-    link,
     types::*,
     HtbXstats,
 };
@@ -225,7 +224,6 @@ pub fn class<T: netlink::NetlinkConnection>(name: &str) -> Result<Vec<Tc>, TcErr
         Ok(Vec::new())
     }
 }
-
 
 /// `classes` returns a list of all classes on the system.
 /// It retrieves the list of links and then calls `classes` for each link.
