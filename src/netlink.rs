@@ -4,7 +4,7 @@ use netlink_packet_core::{
 use netlink_packet_route::{RtnlMessage, TcMessage};
 use netlink_sys::{protocols::NETLINK_ROUTE, Socket, SocketAddr};
 
-use crate::errors::TcError;
+use crate::errors::NetlinkError;
 
 /// A trait for a netlink connection.
 ///
@@ -12,12 +12,15 @@ use crate::errors::TcError;
 pub trait NetlinkConnection {
     /// Create a new netlink connection.
     /// Initialize a new netlink socket and connect to the kernel.
-    fn new() -> Result<Self, TcError>
+    fn new() -> Result<Self, NetlinkError>
     where
         Self: Sized;
 
     /// Get all qdiscs from the kernel.
     fn qdiscs(&self) -> Result<Vec<TcMessage>, TcError>;
+    /// Get all qdiscs from Netlink.
+    fn qdiscs(&self) -> Result<Vec<TcMessage>, NetlinkError>;
+
 }
 
 /// A struct for communicating with the kernel via netlink.
@@ -26,18 +29,18 @@ pub struct Netlink {
 }
 
 impl NetlinkConnection for Netlink {
-    fn new() -> Result<Self, TcError>
+    fn new() -> Result<Self, NetlinkError>
     where
         Self: Sized,
     {
-        let socket = Socket::new(NETLINK_ROUTE).map_err(|err| TcError::Socket(Box::new(err)))?;
+        let socket = Socket::new(NETLINK_ROUTE).map_err(|err| NetlinkError::Socket(Box::new(err)))?;
         socket
             .connect(&SocketAddr::new(0, 0))
-            .map_err(|err| TcError::Socket(Box::new(err)))?;
+            .map_err(|err| NetlinkError::Socket(Box::new(err)))?;
         Ok(Self { socket })
     }
 
-    fn qdiscs(&self) -> Result<Vec<TcMessage>, TcError> {
+    fn qdiscs(&self) -> Result<Vec<TcMessage>, NetlinkError> {
         send_get_qdisc_request(&self.socket)?;
 
         let mut receive_buffer = vec![0; 4096];
@@ -73,7 +76,7 @@ impl NetlinkConnection for Netlink {
     }
 }
 
-fn send_get_qdisc_request(socket: &Socket) -> Result<(), TcError> {
+fn send_get_qdisc_request(socket: &Socket) -> Result<(), NetlinkError> {
     let mut nl_hdr = NetlinkHeader::default();
     nl_hdr.flags = NLM_F_REQUEST | NLM_F_DUMP;
 
@@ -89,5 +92,6 @@ fn send_get_qdisc_request(socket: &Socket) -> Result<(), TcError> {
     match socket.send(&buf[..], 0) {
         Ok(_) => Ok(()),
         Err(e) => Err(TcError::Send(e.to_string())),
+        Err(e) => Err(NetlinkError::Send(e.to_string())),
     }
 }
