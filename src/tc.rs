@@ -5,7 +5,7 @@ use crate::{
     class::htb::Htb,
     constants::*,
     errors::TcError,
-    links, netlink,
+    link, netlink,
     qdiscs::{
         clsact::Clsact,
         fq_codel::{FqCodel, FqCodelXStats},
@@ -158,61 +158,81 @@ pub fn qdiscs<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
     Ok(tcs)
 }
 
+/// `class_for_index` returns a list of all classes for a given interface index.
+/// The underlying implementation makes a netlink call with the `RTM_GETCLASS` command.
+pub fn class_for_index<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<Tc>, TcError> {
+    let mut tcs = Vec::new();
+
+    let messages = T::new()?.classes(index as i32)?;
+    for message in &messages {
+        let tc = TcMessage {
+            index,
+            handle: message.header.handle,
+            parent: message.header.parent,
+        };
+        let mut attr = Attribute::default();
+
+        let mut opts: Vec<&nla::DefaultNla> = vec![];
+        let mut xstats = Vec::new();
+        for nla in &message.nlas {
+            match nla {
+                netlink_tc::Nla::Kind(kind) => attr.kind = Some(kind.clone()),
+                netlink_tc::Nla::Stats2(stats) => {
+                    for stat in stats {
+                        match stat {
+                            netlink_tc::Stats2::StatsBasic(stat) => {
+                                parse_stats_basic(&mut attr, stat)
+                            }
+                            netlink_tc::Stats2::StatsQueue(stat) => {
+                                parse_stats_queue(&mut attr, stat)
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                netlink_tc::Nla::Stats(stats) => parse_stats(&mut attr, stats),
+                netlink_tc::Nla::Options(tc_opts) => {
+                    for opt in tc_opts {
+                        if let netlink_tc::TcOpt::Other(opt) = opt {
+                            opts.push(opt);
+                        }
+                    }
+                }
+                netlink_tc::Nla::XStats(bytes) => xstats = bytes.clone(),
+                _ => (),
+            }
+        }
+
+        parse_classes(&mut attr, opts)?;
+        parse_xstats(&mut attr, xstats)?;
+
+        tcs.push(Tc { msg: tc, attr });
+    }
+
+    Ok(tcs)
+}
+
+/// `class` returns a list of all classes for a given interface name.
+/// It retrieves the list of links and then calls `class_for_index`
+/// for the link with the matching name.
+pub fn class<T: netlink::NetlinkConnection>(name: &str) -> Result<Vec<Tc>, TcError> {
+    let links = link::links::<T>()?;
+
+    if let Some(link) = links.iter().find(|link| link.name == name) {
+        class_for_index::<T>(link.index)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
 /// `classes` returns a list of all classes on the system.
 /// It retrieves the list of links and then calls `classes` for each link.
-/// The underlying implementation makes a netlink call with the `RTM_GETCLASS` command.
 pub fn classes<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
     let mut tcs = Vec::new();
 
-    let links = links::<T>()?;
-
+    let links = link::links::<T>()?;
     for link in links {
-        let index = link.index;
-        let messages = T::new()?.classes(index as i32)?;
-        for message in &messages {
-            let tc = TcMessage {
-                index,
-                handle: message.header.handle,
-                parent: message.header.parent,
-            };
-            let mut attr = Attribute::default();
-
-            let mut opts: Vec<&nla::DefaultNla> = vec![];
-            let mut xstats = Vec::new();
-            for nla in &message.nlas {
-                match nla {
-                    netlink_tc::Nla::Kind(kind) => attr.kind = Some(kind.clone()),
-                    netlink_tc::Nla::Stats2(stats) => {
-                        for stat in stats {
-                            match stat {
-                                netlink_tc::Stats2::StatsBasic(stat) => {
-                                    parse_stats_basic(&mut attr, stat)
-                                }
-                                netlink_tc::Stats2::StatsQueue(stat) => {
-                                    parse_stats_queue(&mut attr, stat)
-                                }
-                                _ => (),
-                            }
-                        }
-                    }
-                    netlink_tc::Nla::Stats(stats) => parse_stats(&mut attr, stats),
-                    netlink_tc::Nla::Options(tc_opts) => {
-                        for opt in tc_opts {
-                            if let netlink_tc::TcOpt::Other(opt) = opt {
-                                opts.push(opt);
-                            }
-                        }
-                    }
-                    netlink_tc::Nla::XStats(bytes) => xstats = bytes.clone(),
-                    _ => (),
-                }
-            }
-
-            parse_classes(&mut attr, opts)?;
-            parse_xstats(&mut attr, xstats)?;
-
-            tcs.push(Tc { msg: tc, attr });
-        }
+        tcs.append(&mut class_for_index::<T>(link.index)?);
     }
 
     Ok(tcs)
@@ -220,7 +240,7 @@ pub fn classes<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
 
 pub fn tc_stats<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
     let mut tcs = qdiscs::<T>()?;
-    tcs.extend(classes::<T>()?);
+    tcs.append(&mut classes::<T>()?);
 
     Ok(tcs)
 }
