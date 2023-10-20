@@ -2,6 +2,15 @@ use netlink_packet_utils::nla::{self, Nla};
 
 use crate::constants::ATTR_LEN;
 
+/// FQ_Codel (Fair Queuing Controlled Delay) is queuing discipline
+/// that combines Fair Queuing with the CoDel AQM scheme.
+/// FQ_Codel uses a stochastic model to classify incoming packets into
+/// different flows and is used to provide a fair share of the
+/// bandwidth to all the flows using the queue.
+/// Each such flow is managed by the CoDel queuing discipline.
+/// Reordering within a flow is avoided since Codel internally uses a FIFO queue.
+///
+/// Defined in `include/uapi/linux/sch_fq_codel.c`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FqCodel {
     pub target: u32,
@@ -21,7 +30,8 @@ impl FqCodel {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+/// Defined in `include/uapi/linux/pkt_sched.h` as `struct tc_fq_codel_xstats`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FqCodelXStats {
     pub maxpacket: u32,
     pub drop_overlimit: u32,
