@@ -30,7 +30,7 @@ jobs:
         with:
           crate: cargo-release
       - name: 🏷️ Tag
-        run: cargo release --no-confirm tag
+        run: cargo release tag --no-confirm --execute
       - name: 🚀 Release
         uses: softprops/action-gh-release@v1
 
