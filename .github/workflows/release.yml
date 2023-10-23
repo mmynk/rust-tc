@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: 📂 Checkout code
         uses: actions/checkout@v4
+      - name: 🧑‍💻 Set up git user
+        uses: fregante/setup-git-user@v2
       - name: 📦 Install cargo-release
         uses: baptiste0928/cargo-install@v2
         with:
@@ -35,6 +37,7 @@ jobs:
         uses: softprops/action-gh-release@v1
 
   publish:
+    name: Publish
     runs-on: ubuntu-latest
     steps:
       - name: 📂 Checkout code
@@ -43,7 +46,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-release
-      - name: 🚀 Release
+      - name: 🚀 Publish
         run: cargo release --no-confirm --execute ${{ github.event.inputs.release-level }}
         env:
           CRATE_NAME: tc
