@@ -14,9 +14,27 @@ on:
         - rc
         - beta
         - alpha
+    publish:
+      type: boolean
+      description: 'Publish to crates.io?'
 
 jobs:
-  github-release:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📂 Checkout code
+        uses: actions/checkout@v4
+      - name: 📦 Install cargo-release
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-release
+      - name: 🏷️ Tag
+        run: cargo release --no-confirm tag
+      - name: 🚀 Release
+        uses: softprops/action-gh-release@v1
+
+  publish:
     runs-on: ubuntu-latest
     steps:
       - name: 📂 Checkout code
@@ -30,3 +48,4 @@ jobs:
         env:
           CRATE_NAME: tc
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        if: github.event.inputs.publish == 'true'
