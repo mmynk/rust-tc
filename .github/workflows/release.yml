@@ -33,6 +33,8 @@ jobs:
           crate: cargo-release
       - name: 🏷️ Tag
         run: cargo release tag --no-confirm --execute
+      - name: 📤 Push
+        run: git push --follow-tags
       - name: 🚀 Release
         uses: softprops/action-gh-release@v1
 
