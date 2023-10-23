@@ -14,9 +14,9 @@ on:
         - rc
         - beta
         - alpha
-    publish:
-      type: boolean
-      description: 'Publish to crates.io?'
+      publish:
+        type: boolean
+        description: 'Publish to crates.io?'
 
 jobs:
   release:
