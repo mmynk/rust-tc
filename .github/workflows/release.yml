@@ -37,6 +37,8 @@ jobs:
         run: git push --follow-tags
       - name: 🚀 Release
         run: gh release create "$(git describe --tags)" --title "$(git describe --tags)" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   publish:
     name: Publish
