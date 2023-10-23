@@ -1,5 +1,5 @@
 [package]
-name = "tc"
+name = "netlink-tc"
 version = "0.0.1"
 authors = ["Mohit Mayank"]
 edition = "2021"
@@ -7,7 +7,7 @@ description = "A Rust library for interacting with the Linux Traffic Control (tc
 readme = "README.md"
 repository = "https://github.com/mmynk/rust-tc"
 license = "MIT OR Apache-2.0"
-keywords = ["tc", "traffic control", "netlink", "linux", "rtnetlink"]
+keywords = ["netlink", "rtnetlink", "tc", "linux"]
 
 [dependencies]
 bincode = "1"
