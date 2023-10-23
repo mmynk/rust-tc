@@ -1,5 +1,5 @@
 [package]
-name = "tc"
+name = "netlink-tc"
 version = "0.0.1"
 authors = ["Mohit Mayank"]
 edition = "2021"
