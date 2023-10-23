@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-level:
+        type: choice
+        description: 'Release Level'
+        options:
+        - patch
+        - minor
+        - major
+        - release
+        - rc
+        - beta
+        - alpha
+
+jobs:
+  github-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📂 Checkout code
+        uses: actions/checkout@v4
+      - name: 📦 Install cargo-release
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-release
+      - name: 🚀 Release
+        run: cargo release --quiet --execute ${{ github.event.inputs.release-level }}
+        env:
+          CRATE_NAME: tc
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
