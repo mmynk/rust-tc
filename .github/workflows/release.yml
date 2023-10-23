@@ -36,7 +36,7 @@ jobs:
       - name: 📤 Push
         run: git push --follow-tags
       - name: 🚀 Release
-        uses: softprops/action-gh-release@v1
+        run: gh release create "$(git describe --tags)" --title "$(git describe --tags)" --generate-notes
 
   publish:
     name: Publish
