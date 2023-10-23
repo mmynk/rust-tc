@@ -7,10 +7,10 @@ on:
         type: choice
         description: 'Release Level'
         options:
+        - release
         - patch
         - minor
         - major
-        - release
         - rc
         - beta
         - alpha
