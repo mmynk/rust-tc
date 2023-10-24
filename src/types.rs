@@ -2,6 +2,65 @@ use serde::{Deserialize, Serialize};
 
 use crate::{errors::TcError, Clsact, FqCodel, FqCodelXStats, Htb, HtbGlob, HtbXstats};
 
+/// This struct is an intermediate representation for netlink `tc` messages.
+/// Any downstream structs should be constructed into this struct.
+#[derive(Default, PartialEq)]
+pub struct TcMsg {
+    pub header: TcHeader,
+    pub attrs: Vec<TcAttr>,
+}
+
+#[derive(Default, PartialEq)]
+pub struct TcHeader {
+    pub index: i32,
+    pub handle: u32,
+    pub parent: u32,
+}
+
+#[derive(PartialEq)]
+pub enum TcAttr {
+    Unspec(Vec<u8>),
+    Kind(String),
+    Options(Vec<TcOption>),
+    Stats(Vec<u8>),
+    Xstats(Vec<u8>),
+    Rate(Vec<u8>),
+    Fcnt(Vec<u8>),
+    Stats2(Vec<TcStats2>),
+    Stab(Vec<u8>),
+    Pad(Vec<u8>),
+    Chain(Vec<u8>),
+    HwOffload(u8),
+}
+
+#[derive(Clone, Default, PartialEq)]
+pub struct TcOption {
+    pub kind: u16,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(PartialEq)]
+pub enum TcStats2 {
+    StatsBasic(Vec<u8>),
+    StatsQueue(Vec<u8>),
+    StatsApp(Vec<u8>),
+}
+
+/// This struct is an intermediate representation for netlink `link` messages.
+/// Any downstream structs should be constructed into this struct.
+pub struct LinkMsg {
+    pub header: LinkHeader,
+    pub attr: LinkAttr,
+}
+
+pub struct LinkHeader {
+    pub index: u32,
+}
+
+pub struct LinkAttr {
+    pub name: String,
+}
+
 #[derive(Debug, Default)]
 pub struct Tc {
     pub msg: TcMessage,
@@ -17,7 +76,7 @@ pub struct TcMessage {
 
 #[derive(Debug, Default)]
 pub struct Attribute {
-    pub kind: Option<String>,
+    pub kind: String,
     pub stats: Option<Stats>,
     pub stats2: Option<Stats2>,
     pub qdisc: Option<QDisc>,
@@ -25,7 +84,7 @@ pub struct Attribute {
     pub xstats: Option<XStats>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Stats {
     pub bytes: u64,
     pub packets: u32,
@@ -37,13 +96,13 @@ pub struct Stats {
     pub backlog: u32,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct StatsBasic {
     pub bytes: u64,
     pub packets: u32,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct StatsQueue {
     pub qlen: u32,
     pub backlog: u32,
