@@ -1,6 +1,3 @@
-use netlink_packet_route::tc as netlink_tc;
-use netlink_packet_utils::{nla, Parseable};
-
 use crate::{
     class::htb::Htb,
     constants::*,
@@ -14,145 +11,38 @@ use crate::{
     HtbXstats,
 };
 
-fn parse_stats(attr: &mut Attribute, tc_stats: &netlink_tc::Stats) {
-    let stats = attr.stats.get_or_insert(Stats::default());
-    stats.bytes = tc_stats.bytes;
-    stats.packets = tc_stats.packets;
-    stats.drops = tc_stats.drops;
-    stats.overlimits = tc_stats.overlimits;
-    stats.bps = tc_stats.bps;
-    stats.pps = tc_stats.pps;
-    stats.qlen = tc_stats.qlen;
-    stats.backlog = tc_stats.backlog;
-}
-
-fn parse_stats_basic(attr: &mut Attribute, bytes: &Vec<u8>) {
-    let stats_basic =
-        netlink_tc::nlas::StatsBasic::parse(&netlink_tc::StatsBasicBuffer::new(bytes));
-    if let Ok(stats_basic) = stats_basic {
-        let stats = attr.stats2.get_or_insert(Stats2::default());
-        stats.basic = Some(StatsBasic {
-            bytes: stats_basic.bytes,
-            packets: stats_basic.packets,
-        });
-    }
-}
-
-fn parse_stats_queue(attr: &mut Attribute, bytes: &Vec<u8>) {
-    let stats_queue =
-        netlink_tc::nlas::StatsQueue::parse(&netlink_tc::StatsQueueBuffer::new(bytes));
-    if let Ok(stats_queue) = stats_queue {
-        let stats = attr.stats2.get_or_insert(Stats2::default());
-        stats.queue = Some(StatsQueue {
-            qlen: stats_queue.qlen,
-            backlog: stats_queue.backlog,
-            drops: stats_queue.drops,
-            requeues: stats_queue.requeues,
-            overlimits: stats_queue.overlimits,
-        });
-    }
-}
-
-fn parse_qdiscs(attr: &mut Attribute, opts: Vec<&nla::DefaultNla>) -> Result<(), TcError> {
-    if let Some(kind) = &attr.kind {
-        let kind = kind.as_str();
-        match kind {
-            FQ_CODEL => attr.qdisc = Some(QDisc::FqCodel(FqCodel::new(opts))),
-            CLSACT => attr.qdisc = Some(QDisc::Clsact(Clsact {})),
-            HTB => {
-                attr.qdisc = {
-                    let htb = Htb::new(opts)?;
-                    match htb.init {
-                        Some(init) => Some(QDisc::Htb(init)),
-                        None => None,
-                    }
-                }
-            }
-            _ => (),
-        }
-    }
-    Ok(())
-}
-
-fn parse_classes(attr: &mut Attribute, opts: Vec<&nla::DefaultNla>) -> Result<(), TcError> {
-    if let Some(kind) = &attr.kind {
-        let kind = kind.as_str();
-        attr.class = match kind {
-            HTB => {
-                let htb = Htb::new(opts)?;
-                Some(Class::Htb(htb))
-            }
-            _ => None,
-        }
-    }
-    Ok(())
-}
-
-fn parse_xstats(attr: &mut Attribute, bytes: Vec<u8>) -> Result<(), TcError> {
-    if let Some(kind) = &attr.kind {
-        let kind = kind.as_str();
-        attr.xstats = match kind {
-            FQ_CODEL => FqCodelXStats::new(&bytes)
-                .and_then(|x| Ok(XStats::FqCodel(x)))
-                .ok(),
-            HTB => HtbXstats::new(&bytes).and_then(|x| Ok(XStats::Htb(x))).ok(),
-            _ => None,
-        }
-    }
-    Ok(())
-}
-
 /// `qdiscs` returns a list of all qdiscs on the system.
 /// The underlying implementation makes a netlink call with the `RTM_GETQDISC` command.
 pub fn qdiscs<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
     let mut tcs = Vec::new();
 
     let messages = T::new()?.qdiscs()?;
-    // println!("messages: {:?}", messages);
     for message in &messages {
         let tc = TcMessage {
             index: message.header.index as u32,
             handle: message.header.handle,
             parent: message.header.parent,
         };
-        let mut attr = Attribute::default();
+        let mut attribute = Attribute::default();
 
-        let mut opts: Vec<&nla::DefaultNla> = vec![];
+        let mut options = Vec::new();
         let mut xstats = Vec::new();
-        for nla in &message.nlas {
-            match nla {
-                netlink_tc::Nla::Kind(kind) => attr.kind = Some(kind.clone()),
-                netlink_tc::Nla::Stats2(stats) => {
-                    for stat in stats {
-                        match stat {
-                            netlink_tc::Stats2::StatsBasic(stat) => {
-                                parse_stats_basic(&mut attr, stat)
-                            }
-                            netlink_tc::Stats2::StatsQueue(stat) => {
-                                parse_stats_queue(&mut attr, stat)
-                            }
-                            // TODO: parse Stats2::StatsApp
-                            _ => (),
-                        }
-                    }
-                }
-                netlink_tc::Nla::Stats(stats) => parse_stats(&mut attr, stats),
-                netlink_tc::Nla::Options(tc_opts) => {
-                    for opt in tc_opts {
-                        if let netlink_tc::TcOpt::Other(opt) = opt {
-                            opts.push(opt);
-                        }
-                    }
-                }
-                netlink_tc::Nla::XStats(bytes) => xstats = bytes.clone(),
+        for attr in &message.attrs {
+            match attr {
+                TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
+                TcAttr::Options(opts) => options = opts.to_vec(),
+                TcAttr::Stats(bytes) => attribute.stats = parse_stats(&bytes).ok(),
+                TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
+                TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(&stats).ok(),
                 _ => (),
+
             }
         }
 
-        parse_qdiscs(&mut attr, opts)?;
-        parse_xstats(&mut attr, xstats)?;
+        attribute.qdisc = parse_qdiscs(attribute.kind.as_str(), options);
+        attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
 
-        tcs.push(Tc { msg: tc, attr });
+        tcs.push(Tc { msg: tc, attr: attribute });
     }
 
     Ok(tcs)
@@ -170,43 +60,25 @@ pub fn class_for_index<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<
             handle: message.header.handle,
             parent: message.header.parent,
         };
-        let mut attr = Attribute::default();
+        let mut attribute = Attribute::default();
 
-        let mut opts: Vec<&nla::DefaultNla> = vec![];
+        let mut opts = vec![];
         let mut xstats = Vec::new();
-        for nla in &message.nlas {
-            match nla {
-                netlink_tc::Nla::Kind(kind) => attr.kind = Some(kind.clone()),
-                netlink_tc::Nla::Stats2(stats) => {
-                    for stat in stats {
-                        match stat {
-                            netlink_tc::Stats2::StatsBasic(stat) => {
-                                parse_stats_basic(&mut attr, stat)
-                            }
-                            netlink_tc::Stats2::StatsQueue(stat) => {
-                                parse_stats_queue(&mut attr, stat)
-                            }
-                            _ => (),
-                        }
-                    }
-                }
-                netlink_tc::Nla::Stats(stats) => parse_stats(&mut attr, stats),
-                netlink_tc::Nla::Options(tc_opts) => {
-                    for opt in tc_opts {
-                        if let netlink_tc::TcOpt::Other(opt) = opt {
-                            opts.push(opt);
-                        }
-                    }
-                }
-                netlink_tc::Nla::XStats(bytes) => xstats = bytes.clone(),
+        for attr in &message.attrs {
+            match attr {
+                TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
+                TcAttr::Options(tc_opts) => opts = tc_opts.to_vec(),
+                TcAttr::Stats(bytes) => attribute.stats = parse_stats(&bytes).ok(),
+                TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
+                TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
                 _ => (),
             }
         }
 
-        parse_classes(&mut attr, opts)?;
-        parse_xstats(&mut attr, xstats)?;
+        attribute.class = parse_classes(attribute.kind.as_str(), opts);
+        attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
 
-        tcs.push(Tc { msg: tc, attr });
+        tcs.push(Tc { msg: tc, attr: attribute });
     }
 
     Ok(tcs)
@@ -243,4 +115,64 @@ pub fn tc_stats<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
     tcs.append(&mut classes::<T>()?);
 
     Ok(tcs)
+}
+
+
+fn parse_stats(bytes: &[u8]) -> Result<Stats, TcError> {
+    bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))
+}
+
+fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
+    let mut stats = Stats2::default();
+    let mut errors = Vec::new();
+    for stat in stats2 {
+        match stat {
+            TcStats2::StatsBasic(bytes) => {
+                match bincode::deserialize(bytes.as_slice()) {
+                    Ok(stats_basic) => stats.basic = Some(stats_basic),
+                    Err(e) => errors.push(format!("Failed to parse StatsBasic: {e}")),
+                }
+            }
+            TcStats2::StatsQueue(bytes) => {
+                match bincode::deserialize(bytes.as_slice()) {
+                    Ok(stats_queue) => stats.queue = Some(stats_queue),
+                    Err(e) => errors.push(format!("Failed to parse StatsQueue: {e}")),
+                }
+            }
+            // TcStats2::StatsApp(bytes) => stats.app = bincode::deserialize(bytes.as_slice()).ok(),
+            _ => (),
+        }
+    }
+
+    if errors.len() > 0 {
+        let message = errors.join(", ");
+        Err(TcError::UnmarshalStructs(message))
+    } else {
+        Ok(stats)
+    }
+}
+
+fn parse_qdiscs(kind: &str, opts: Vec<TcOption>) -> Option<QDisc> {
+    match kind {
+        FQ_CODEL => Some(QDisc::FqCodel(FqCodel::new(opts))),
+        CLSACT => Some(QDisc::Clsact(Clsact {})),
+        HTB => Htb::new(opts).init.and_then(|htb| Some(QDisc::Htb(htb))),
+        _ => None,
+    }
+}
+
+fn parse_classes(kind: &str, opts: Vec<TcOption>) -> Option<Class> {
+    match kind {
+        HTB => Some(Class::Htb(Htb::new(opts))),
+        _ => None,
+    }
+}
+
+fn parse_xstats(kind: &str, bytes: &[u8]) -> Result<XStats, TcError> {
+    match kind {
+        FQ_CODEL => FqCodelXStats::new(&bytes)
+            .and_then(|x| Ok(XStats::FqCodel(x))),
+        HTB => HtbXstats::new(&bytes).and_then(|x| Ok(XStats::Htb(x))),
+        _ => Err(TcError::UnimplementedAttribute(format!("XStats for {kind}"))),
+    }
 }

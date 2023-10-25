@@ -41,6 +41,12 @@ pub enum TcError {
     #[error("Failed to unmarshal struct: {0}")]
     UnmarshalStruct(#[from] Box<ErrorKind>),
 
+    #[error("Failed to unmarshal structs: {0}")]
+    UnmarshalStructs(String),
+
     #[error("Inavalid attribute: {0}")]
     InvalidAttribute(String),
+
+    #[error("Attribute not implemented: {0}")]
+    UnimplementedAttribute(String),
 }

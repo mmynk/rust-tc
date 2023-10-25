@@ -1,16 +1,10 @@
-use netlink_packet_utils::nla::{self, Nla};
 use serde::{Deserialize, Serialize};
 
-use crate::constants::ATTR_LEN;
-use crate::errors::TcError;
-use crate::RateSpec;
+use crate::{
+    errors::TcError,
+    types::*,
+};
 
-/// The Hierarchy Token Bucket implements a rich linksharing hierarchy of classes
-/// with an emphasis on conforming to existing practices.
-/// HTB facilitates guaranteeing bandwidth to classes,
-/// while also allowing specification of upper limits to inter-class sharing.
-/// It contains shaping elements, based on TBF and can prioritize classes.
-///
 /// Defined in `include/uapi/linux/pkt_sched.h`.
 #[derive(Default, Debug, PartialEq)]
 pub struct Htb {
@@ -18,12 +12,10 @@ pub struct Htb {
     pub init: Option<HtbGlob>,
     pub ctab: Vec<u8>,
     pub rtab: Vec<u8>,
-    pub direct_qlen: u32,
-    pub rate64: u64,
-    pub ceil64: u64,
+    pub direct_qlen: Option<u32>,
+    pub rate64: Option<u64>,
+    pub ceil64: Option<u64>,
 }
-
-const HTB_OPT_LEN: usize = 44;
 
 /// Defined in `include/uapi/linux/pkt_sched.h` as `struct tc_htb_opt`.
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
@@ -36,8 +28,6 @@ pub struct HtbOpt {
     pub level: u32,
     pub prio: u32,
 }
-
-const HTB_GLOB_LEN: usize = 4 * 5;
 
 /// Defined in `include/uapi/linux/pkt_sched.h` as `struct tc_htb_glob`.
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
@@ -90,88 +80,67 @@ impl From<u16> for TcaHtb {
 }
 
 impl Htb {
-    pub fn new(nla: Vec<&nla::DefaultNla>) -> Result<Self, TcError> {
-        unmarshal_htb(nla)
+    pub fn new(opts: Vec<TcOption>) -> Self {
+        unmarshal_htb(opts)
     }
 }
 
 impl HtbXstats {
-    pub fn new(buf: &[u8]) -> Result<Self, TcError> {
-        let result = unmarshal_htb_xstats(buf);
+    pub fn new(bytes: &[u8]) -> Result<Self, TcError> {
+        let result = unmarshal_htb_xstats(bytes);
         result
     }
 }
 
-fn unmarshal_htb(nlas: Vec<&nla::DefaultNla>) -> Result<Htb, TcError> {
+fn unmarshal_htb(opts: Vec<TcOption>) -> Htb {
     let mut htb = Htb::default();
 
-    for nla in nlas {
-        let kind = TcaHtb::from(nla.kind());
+    for opt in opts {
+        let kind = TcaHtb::from(opt.kind);
         match kind {
-            TcaHtb::Parms => {
-                htb.parms = {
-                    let mut buf = [0u8; HTB_OPT_LEN];
-                    nla.emit_value(&mut buf);
-                    Some(unmarshal_htb_opt(&buf)?)
+            TcaHtb::Parms => htb.parms = unmarshal_htb_opt(opt.bytes.as_slice()).ok(),
+            TcaHtb::Init => htb.init = unmarshal_htb_glob(opt.bytes.as_slice()).ok(),
+            TcaHtb::Ctab => htb.ctab = opt.bytes,
+            TcaHtb::Rtab => htb.rtab = opt.bytes,
+            TcaHtb::DirectQlen => htb.direct_qlen = {
+                if opt.bytes.len() < 4 {
+                    // TODO: log error
+                    None
+                } else {
+                    Some(u32::from_ne_bytes(opt.bytes[0..4].try_into().unwrap()))
                 }
-            }
-            TcaHtb::Init => {
-                htb.init = {
-                    let mut buf = [0u8; HTB_GLOB_LEN];
-                    nla.emit_value(&mut buf);
-                    Some(unmarshal_htb_glob(&buf)?)
+            },
+            TcaHtb::Rate64 => htb.rate64 = {
+                if opt.bytes.len() < 8 {
+                    // TODO: log error
+                    None
+                } else {
+                    Some(u64::from_ne_bytes(opt.bytes[0..8].try_into().unwrap()))
                 }
-            }
-            TcaHtb::Ctab => {
-                htb.ctab = {
-                    let mut buf = vec![0u8; nla.value_len()];
-                    nla.emit_value(&mut buf);
-                    buf.to_vec()
+            },
+            TcaHtb::Ceil64 => htb.ceil64 = {
+                if opt.bytes.len() < 8 {
+                    // TODO: log error
+                    None
+                } else {
+                    Some(u64::from_ne_bytes(opt.bytes[0..8].try_into().unwrap()))
                 }
-            }
-            TcaHtb::Rtab => {
-                htb.rtab = {
-                    let mut buf = vec![0u8; nla.value_len()];
-                    nla.emit_value(&mut buf);
-                    buf.to_vec()
-                }
-            }
-            TcaHtb::DirectQlen => {
-                htb.direct_qlen = {
-                    let mut buf = [0u8; ATTR_LEN];
-                    nla.emit_value(&mut buf);
-                    u32::from_ne_bytes(buf)
-                }
-            }
-            TcaHtb::Rate64 => {
-                htb.rate64 = {
-                    let mut buf = [0u8; 8];
-                    nla.emit_value(&mut buf);
-                    u64::from_ne_bytes(buf)
-                }
-            }
-            TcaHtb::Ceil64 => {
-                htb.ceil64 = {
-                    let mut buf = [0u8; 8];
-                    nla.emit_value(&mut buf);
-                    u64::from_ne_bytes(buf)
-                }
-            }
+            },
             _ => (),
         }
     }
 
-    Ok(htb)
+    htb
 }
 
-fn unmarshal_htb_opt(buf: &[u8]) -> Result<HtbOpt, TcError> {
-    bincode::deserialize(buf).map_err(|e| TcError::UnmarshalStruct(e))
+fn unmarshal_htb_opt(bytes: &[u8]) -> Result<HtbOpt, TcError> {
+    bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))
 }
 
-fn unmarshal_htb_glob(buf: &[u8]) -> Result<HtbGlob, TcError> {
-    bincode::deserialize(buf).map_err(|e| TcError::UnmarshalStruct(e))
+fn unmarshal_htb_glob(bytes: &[u8]) -> Result<HtbGlob, TcError> {
+    bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))
 }
 
-fn unmarshal_htb_xstats(buf: &[u8]) -> Result<HtbXstats, TcError> {
-    bincode::deserialize(buf).map_err(|e| TcError::UnmarshalStruct(e))
+fn unmarshal_htb_xstats(bytes: &[u8]) -> Result<HtbXstats, TcError> {
+    bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))
 }
