@@ -8,7 +8,7 @@ pub fn links<T: netlink::NetlinkConnection>() -> Result<Vec<Link>, LinkError> {
     for message in messages {
         links.push(Link {
             index: message.header.index,
-            name: message.attr.name
+            name: message.attr.name,
         });
     }
 

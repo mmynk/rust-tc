@@ -35,14 +35,16 @@ pub fn qdiscs<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
                 TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
                 TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(&stats).ok(),
                 _ => (),
-
             }
         }
 
         attribute.qdisc = parse_qdiscs(attribute.kind.as_str(), options);
         attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
 
-        tcs.push(Tc { msg: tc, attr: attribute });
+        tcs.push(Tc {
+            msg: tc,
+            attr: attribute,
+        });
     }
 
     Ok(tcs)
@@ -78,7 +80,10 @@ pub fn class_for_index<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<
         attribute.class = parse_classes(attribute.kind.as_str(), opts);
         attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
 
-        tcs.push(Tc { msg: tc, attr: attribute });
+        tcs.push(Tc {
+            msg: tc,
+            attr: attribute,
+        });
     }
 
     Ok(tcs)
@@ -117,7 +122,6 @@ pub fn tc_stats<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
     Ok(tcs)
 }
 
-
 fn parse_stats(bytes: &[u8]) -> Result<Stats, TcError> {
     bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))
 }
@@ -127,18 +131,14 @@ fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
     let mut errors = Vec::new();
     for stat in stats2 {
         match stat {
-            TcStats2::StatsBasic(bytes) => {
-                match bincode::deserialize(bytes.as_slice()) {
-                    Ok(stats_basic) => stats.basic = Some(stats_basic),
-                    Err(e) => errors.push(format!("Failed to parse StatsBasic: {e}")),
-                }
-            }
-            TcStats2::StatsQueue(bytes) => {
-                match bincode::deserialize(bytes.as_slice()) {
-                    Ok(stats_queue) => stats.queue = Some(stats_queue),
-                    Err(e) => errors.push(format!("Failed to parse StatsQueue: {e}")),
-                }
-            }
+            TcStats2::StatsBasic(bytes) => match bincode::deserialize(bytes.as_slice()) {
+                Ok(stats_basic) => stats.basic = Some(stats_basic),
+                Err(e) => errors.push(format!("Failed to parse StatsBasic: {e}")),
+            },
+            TcStats2::StatsQueue(bytes) => match bincode::deserialize(bytes.as_slice()) {
+                Ok(stats_queue) => stats.queue = Some(stats_queue),
+                Err(e) => errors.push(format!("Failed to parse StatsQueue: {e}")),
+            },
             // TcStats2::StatsApp(bytes) => stats.app = bincode::deserialize(bytes.as_slice()).ok(),
             _ => (),
         }
@@ -170,9 +170,10 @@ fn parse_classes(kind: &str, opts: Vec<TcOption>) -> Option<Class> {
 
 fn parse_xstats(kind: &str, bytes: &[u8]) -> Result<XStats, TcError> {
     match kind {
-        FQ_CODEL => FqCodelXStats::new(&bytes)
-            .and_then(|x| Ok(XStats::FqCodel(x))),
+        FQ_CODEL => FqCodelXStats::new(&bytes).and_then(|x| Ok(XStats::FqCodel(x))),
         HTB => HtbXstats::new(&bytes).and_then(|x| Ok(XStats::Htb(x))),
-        _ => Err(TcError::UnimplementedAttribute(format!("XStats for {kind}"))),
+        _ => Err(TcError::UnimplementedAttribute(format!(
+            "XStats for {kind}"
+        ))),
     }
 }

@@ -3,8 +3,8 @@ use std::vec;
 use netlink_packet_core::{
     NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP, NLM_F_REQUEST,
 };
-use netlink_packet_route::{LinkMessage, RtnlMessage, TcMessage, link, tc as netlink_tc};
-use netlink_packet_utils::{Emitable, nla::Nla};
+use netlink_packet_route::{link, tc as netlink_tc, LinkMessage, RtnlMessage, TcMessage};
+use netlink_packet_utils::{nla::Nla, Emitable};
 use netlink_sys::{protocols::NETLINK_ROUTE, Socket, SocketAddr};
 
 use crate::{errors::NetlinkError, types::*};
@@ -220,7 +220,11 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
     tc_messages
         .into_iter()
         .map(|tc_message| {
-            let TcMessage { header: tc_header, nlas, .. } = tc_message;
+            let TcMessage {
+                header: tc_header,
+                nlas,
+                ..
+            } = tc_message;
             let header = TcHeader {
                 index: tc_header.index,
                 handle: tc_header.handle,
@@ -241,7 +245,7 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                                         bytes: vec![],
                                     };
                                     opts.push(option);
-                                },
+                                }
                                 netlink_tc::TcOpt::U32(nla) => {
                                     let mut buf = vec![0u8; nla.value_len()];
                                     nla.emit_value(buf.as_mut_slice());
@@ -250,7 +254,7 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                                         bytes: buf,
                                     };
                                     opts.push(option);
-                                },
+                                }
                                 netlink_tc::TcOpt::Matchall(nla) => {
                                     let mut buf = vec![0u8; nla.value_len()];
                                     nla.emit_value(buf.as_mut_slice());
@@ -259,7 +263,7 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                                         bytes: buf,
                                     };
                                     opts.push(option);
-                                },
+                                }
                                 netlink_tc::TcOpt::Other(nla) => {
                                     let mut buf = vec![0u8; nla.value_len()];
                                     nla.emit_value(buf.as_mut_slice());
@@ -268,9 +272,8 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                                         bytes: buf,
                                     };
                                     opts.push(option);
-                                },
+                                }
                                 _ => (),
-
                             };
                         }
                         attrs.push(TcAttr::Options(opts));
@@ -284,9 +287,15 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                         let mut stats2 = Vec::new();
                         for stat in tc_stats {
                             match stat {
-                                netlink_tc::Stats2::StatsBasic(bytes) => stats2.push(TcStats2::StatsBasic(bytes)),
-                                netlink_tc::Stats2::StatsQueue(bytes) => stats2.push(TcStats2::StatsQueue(bytes)),
-                                netlink_tc::Stats2::StatsApp(bytes) => stats2.push(TcStats2::StatsApp(bytes)),
+                                netlink_tc::Stats2::StatsBasic(bytes) => {
+                                    stats2.push(TcStats2::StatsBasic(bytes))
+                                }
+                                netlink_tc::Stats2::StatsQueue(bytes) => {
+                                    stats2.push(TcStats2::StatsQueue(bytes))
+                                }
+                                netlink_tc::Stats2::StatsApp(bytes) => {
+                                    stats2.push(TcStats2::StatsApp(bytes))
+                                }
                                 _ => (),
                             }
                         }
@@ -298,7 +307,7 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                     netlink_tc::Nla::Stab(bytes) => attrs.push(TcAttr::Stab(bytes)),
                     netlink_tc::Nla::Chain(bytes) => attrs.push(TcAttr::Chain(bytes)),
                     netlink_tc::Nla::HwOffload(byte) => attrs.push(TcAttr::HwOffload(byte)),
-                    _ => ()
+                    _ => (),
                 }
             }
 
@@ -307,12 +316,15 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
         .collect()
 }
 
-
 fn to_link(link_messages: Vec<LinkMessage>) -> Vec<LinkMsg> {
     link_messages
         .into_iter()
         .map(|link_message| {
-            let LinkMessage { header: link_header, nlas, .. } = link_message;
+            let LinkMessage {
+                header: link_header,
+                nlas,
+                ..
+            } = link_message;
             let header = LinkHeader {
                 index: link_header.index,
             };
@@ -321,13 +333,13 @@ fn to_link(link_messages: Vec<LinkMessage>) -> Vec<LinkMsg> {
             for nla in nlas {
                 match nla {
                     link::nlas::Nla::IfName(if_name) => name = if_name,
-                    _ => ()
+                    _ => (),
                 }
             }
 
             LinkMsg {
                 header,
-                attr: LinkAttr { name }
+                attr: LinkAttr { name },
             }
         })
         .collect()
@@ -387,32 +399,28 @@ mod tests {
                 match attr {
                     TcAttr::Kind(kind) => assert_eq!(kind, "mq"),
                     TcAttr::Stats(bytes) => {
-                        assert_eq!(bytes, &vec![
-                            28, 146, 82, 7, 0, 0, 0, 0,
-                            119, 55, 6, 0,
-                            0, 0, 0, 0,
-                            0, 0, 0, 0,
-                            0, 0, 0, 0,
-                            0, 0, 0, 0,
-                            0, 0, 0, 0,
-                            0, 0, 0, 0,
-                        ]);
+                        assert_eq!(
+                            bytes,
+                            &vec![
+                                28, 146, 82, 7, 0, 0, 0, 0, 119, 55, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                            ]
+                        );
                     }
                     TcAttr::Stats2(stats) => {
                         for stat in stats {
                             match stat {
-                                TcStats2::StatsBasic(bytes) => assert_eq!(bytes, &vec![
-                                    28, 146, 82, 7, 0, 0, 0, 0,
-                                    119, 55, 6, 0,
-                                    0, 0, 0, 0,
-                                ]),
-                                TcStats2::StatsQueue(bytes) => assert_eq!(bytes, &vec![
-                                    0, 0, 0, 0,
-                                    0, 0, 0, 0,
-                                    0, 0, 0, 0,
-                                    0, 0, 0, 0,
-                                    13, 0, 0, 0,
-                                ]),
+                                TcStats2::StatsBasic(bytes) => assert_eq!(
+                                    bytes,
+                                    &vec![28, 146, 82, 7, 0, 0, 0, 0, 119, 55, 6, 0, 0, 0, 0, 0,]
+                                ),
+                                TcStats2::StatsQueue(bytes) => assert_eq!(
+                                    bytes,
+                                    &vec![
+                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0,
+                                        0,
+                                    ]
+                                ),
                                 _ => (),
                             }
                         }
@@ -439,58 +447,58 @@ mod tests {
                     TcAttr::Options(opts) => {
                         for opt in opts {
                             match opt {
-                                TcOption { kind, bytes } => {
-                                    match kind {
-                                        1 => assert_eq!(bytes, &vec![135, 19, 0, 0]),
-                                        2 => assert_eq!(bytes, &vec![0, 40, 0, 0]),
-                                        3 => assert_eq!(bytes, &vec![159, 134, 1, 0]),
-                                        4 => assert_eq!(bytes, &vec![1, 0, 0, 0]),
-                                        5 => assert_eq!(bytes, &vec![0, 4, 0, 0]),
-                                        6 => assert_eq!(bytes, &vec![234, 5, 0, 0]),
-                                        8 => assert_eq!(bytes, &vec![64, 0, 0, 0]),
-                                        9 => assert_eq!(bytes, &vec![0, 0, 0, 2]),
-                                        _ => (),
-                                    }
-                                }
+                                TcOption { kind, bytes } => match kind {
+                                    1 => assert_eq!(bytes, &vec![135, 19, 0, 0]),
+                                    2 => assert_eq!(bytes, &vec![0, 40, 0, 0]),
+                                    3 => assert_eq!(bytes, &vec![159, 134, 1, 0]),
+                                    4 => assert_eq!(bytes, &vec![1, 0, 0, 0]),
+                                    5 => assert_eq!(bytes, &vec![0, 4, 0, 0]),
+                                    6 => assert_eq!(bytes, &vec![234, 5, 0, 0]),
+                                    8 => assert_eq!(bytes, &vec![64, 0, 0, 0]),
+                                    9 => assert_eq!(bytes, &vec![0, 0, 0, 2]),
+                                    _ => (),
+                                },
                             }
                         }
                     }
-                    TcAttr::Stats(bytes) => assert_eq!(bytes, &vec![
-                        76, 222, 96, 2, 0, 0, 0, 0,
-                        55, 135, 2, 0,
-                        0, 0, 0, 0,
-                        0, 0, 0, 0,
-                        0, 0, 0, 0,
-                        0, 0, 0, 0,
-                        0, 0, 0, 0,
-                        0, 0, 0, 0,
-                    ]),
+                    TcAttr::Stats(bytes) => assert_eq!(
+                        bytes,
+                        &vec![
+                            76, 222, 96, 2, 0, 0, 0, 0, 55, 135, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        ]
+                    ),
                     TcAttr::Stats2(stats) => {
                         for stat in stats {
                             match stat {
-                                TcStats2::StatsBasic(bytes) => assert_eq!(bytes, &vec![
-                                    76, 222, 96, 2, 0, 0, 0, 0,
-                                    55, 135, 2, 0,
-                                    0, 0, 0, 0,
-                                ]),
-                                TcStats2::StatsQueue(bytes) => assert_eq!(bytes, &vec![
-                                    0, 0, 0, 0,
-                                    0, 0, 0, 0,
-                                    0, 0, 0, 0,
-                                    0, 0, 0, 0,
-                                    7, 0, 0, 0,
-                                ]),
-                                TcStats2::StatsApp(bytes) => assert_eq!(bytes, &vec![
-                                    0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                ]),
+                                TcStats2::StatsBasic(bytes) => assert_eq!(
+                                    bytes,
+                                    &vec![76, 222, 96, 2, 0, 0, 0, 0, 55, 135, 2, 0, 0, 0, 0, 0,]
+                                ),
+                                TcStats2::StatsQueue(bytes) => assert_eq!(
+                                    bytes,
+                                    &vec![
+                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0,
+                                    ]
+                                ),
+                                TcStats2::StatsApp(bytes) => assert_eq!(
+                                    bytes,
+                                    &vec![
+                                        0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0,
+                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                        0,
+                                    ]
+                                ),
                             }
                         }
                     }
-                    TcAttr::Xstats(bytes) => assert_eq!(bytes, &vec![
-                        0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    ]),
+                    TcAttr::Xstats(bytes) => assert_eq!(
+                        bytes,
+                        &vec![
+                            0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        ]
+                    ),
                     TcAttr::HwOffload(byte) => assert_eq!(byte, &0),
                     _ => (),
                 }
@@ -513,19 +521,17 @@ mod tests {
                     TcAttr::Options(opts) => {
                         for opt in opts {
                             match opt {
-                                TcOption { kind, bytes } => {
-                                    match kind {
-                                        2 => assert_eq!(bytes, &vec![
-                                            17, 0, 3, 0,
-                                            10, 0, 0, 0,
-                                            32, 0, 0, 0,
-                                            0, 0, 0, 0,
-                                            0, 0, 0, 0,
-                                        ]),
-                                        5 => assert_eq!(bytes, &vec![232, 3, 0, 0]),
-                                        _ => (),
-                                    }
-                                }
+                                TcOption { kind, bytes } => match kind {
+                                    2 => assert_eq!(
+                                        bytes,
+                                        &vec![
+                                            17, 0, 3, 0, 10, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0,
+                                            0, 0, 0,
+                                        ]
+                                    ),
+                                    5 => assert_eq!(bytes, &vec![232, 3, 0, 0]),
+                                    _ => (),
+                                },
                             }
                         }
                     }
@@ -572,15 +578,17 @@ mod tests {
                     TcAttr::Options(opts) => {
                         for opt in opts {
                             match opt {
-                                TcOption { kind, bytes } => {
-                                    match kind {
-                                        1 => assert_eq!(bytes, &vec![
-                                            0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0,
-                                            64, 13, 3, 0, 64, 13, 3, 0, 212, 48, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0,
-                                        ]),
-                                        _ => (),
-                                    }
-                                }
+                                TcOption { kind, bytes } => match kind {
+                                    1 => assert_eq!(
+                                        bytes,
+                                        &vec![
+                                            0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0, 0, 1, 0, 0, 0,
+                                            0, 0, 0, 72, 232, 1, 0, 64, 13, 3, 0, 64, 13, 3, 0,
+                                            212, 48, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0,
+                                        ]
+                                    ),
+                                    _ => (),
+                                },
                             }
                         }
                     }
@@ -590,19 +598,20 @@ mod tests {
                             match stat {
                                 TcStats2::StatsBasic(bytes) => assert_eq!(bytes, &vec![0u8; 16]),
                                 TcStats2::StatsQueue(bytes) => assert_eq!(bytes, &vec![0u8; 20]),
-                                TcStats2::StatsApp(bytes) => assert_eq!(bytes, &vec![
-                                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13, 3, 0,
-                                ]),
+                                TcStats2::StatsApp(bytes) => assert_eq!(
+                                    bytes,
+                                    &vec![
+                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13,
+                                        3, 0,
+                                    ]
+                                ),
                             }
                         }
                     }
-                    TcAttr::Xstats(bytes) => assert_eq!(bytes, &vec![
-                        0, 0, 0, 0,
-                        0, 0, 0, 0,
-                        0, 0, 0, 0,
-                        64, 13, 3, 0,
-                        64, 13, 3, 0,
-                    ]),
+                    TcAttr::Xstats(bytes) => assert_eq!(
+                        bytes,
+                        &vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13, 3, 0,]
+                    ),
                     _ => (),
                 }
             }

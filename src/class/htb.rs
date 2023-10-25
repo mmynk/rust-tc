@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    errors::TcError,
-    types::*,
-};
+use crate::{errors::TcError, types::*};
 
 /// Defined in `include/uapi/linux/pkt_sched.h`.
 #[derive(Default, Debug, PartialEq)]
@@ -102,30 +99,36 @@ fn unmarshal_htb(opts: Vec<TcOption>) -> Htb {
             TcaHtb::Init => htb.init = unmarshal_htb_glob(opt.bytes.as_slice()).ok(),
             TcaHtb::Ctab => htb.ctab = opt.bytes,
             TcaHtb::Rtab => htb.rtab = opt.bytes,
-            TcaHtb::DirectQlen => htb.direct_qlen = {
-                if opt.bytes.len() < 4 {
-                    // TODO: log error
-                    None
-                } else {
-                    Some(u32::from_ne_bytes(opt.bytes[0..4].try_into().unwrap()))
+            TcaHtb::DirectQlen => {
+                htb.direct_qlen = {
+                    if opt.bytes.len() < 4 {
+                        // TODO: log error
+                        None
+                    } else {
+                        Some(u32::from_ne_bytes(opt.bytes[0..4].try_into().unwrap()))
+                    }
                 }
-            },
-            TcaHtb::Rate64 => htb.rate64 = {
-                if opt.bytes.len() < 8 {
-                    // TODO: log error
-                    None
-                } else {
-                    Some(u64::from_ne_bytes(opt.bytes[0..8].try_into().unwrap()))
+            }
+            TcaHtb::Rate64 => {
+                htb.rate64 = {
+                    if opt.bytes.len() < 8 {
+                        // TODO: log error
+                        None
+                    } else {
+                        Some(u64::from_ne_bytes(opt.bytes[0..8].try_into().unwrap()))
+                    }
                 }
-            },
-            TcaHtb::Ceil64 => htb.ceil64 = {
-                if opt.bytes.len() < 8 {
-                    // TODO: log error
-                    None
-                } else {
-                    Some(u64::from_ne_bytes(opt.bytes[0..8].try_into().unwrap()))
+            }
+            TcaHtb::Ceil64 => {
+                htb.ceil64 = {
+                    if opt.bytes.len() < 8 {
+                        // TODO: log error
+                        None
+                    } else {
+                        Some(u64::from_ne_bytes(opt.bytes[0..8].try_into().unwrap()))
+                    }
                 }
-            },
+            }
             _ => (),
         }
     }
