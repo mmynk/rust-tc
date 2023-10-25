@@ -1,8 +1,8 @@
-use netlink_tc::{classes, link, qdiscs, Netlink};
+use netlink_tc as tc;
 
 #[test]
 fn test_get_qdiscs() {
-    let result = qdiscs();
+    let result = tc::qdiscs();
     assert!(result.is_ok());
     let tcs = result.unwrap();
     for tc in tcs {
@@ -15,12 +15,12 @@ fn test_get_qdiscs() {
 
 #[test]
 fn test_get_classes() {
-    let result = classes();
+    let result = tc::classes();
     assert!(result.is_ok());
 }
 
 #[test]
 fn test_get_links() {
-    let result = link::links::<Netlink>();
+    let result = tc::link::links::<tc::Netlink>();
     assert!(result.is_ok());
 }
