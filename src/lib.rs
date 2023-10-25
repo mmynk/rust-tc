@@ -10,6 +10,8 @@ mod qdiscs;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod test_data;
 
 pub use class::*;
 pub use netlink::*;

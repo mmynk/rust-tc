@@ -4,20 +4,20 @@ use crate::{errors::TcError, Clsact, FqCodel, FqCodelXStats, Htb, HtbGlob, HtbXs
 
 /// This struct is an intermediate representation for netlink `tc` messages.
 /// Any downstream structs should be constructed into this struct.
-#[derive(Default, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct TcMsg {
     pub header: TcHeader,
     pub attrs: Vec<TcAttr>,
 }
 
-#[derive(Default, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct TcHeader {
     pub index: i32,
     pub handle: u32,
     pub parent: u32,
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum TcAttr {
     Unspec(Vec<u8>),
     Kind(String),
@@ -33,13 +33,13 @@ pub enum TcAttr {
     HwOffload(u8),
 }
 
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TcOption {
     pub kind: u16,
     pub bytes: Vec<u8>,
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum TcStats2 {
     StatsBasic(Vec<u8>),
     StatsQueue(Vec<u8>),
@@ -48,15 +48,18 @@ pub enum TcStats2 {
 
 /// This struct is an intermediate representation for netlink `link` messages.
 /// Any downstream structs should be constructed into this struct.
+#[derive(Debug)]
 pub struct LinkMsg {
     pub header: LinkHeader,
     pub attr: LinkAttr,
 }
 
+#[derive(Debug)]
 pub struct LinkHeader {
     pub index: u32,
 }
 
+#[derive(Debug)]
 pub struct LinkAttr {
     pub name: String,
 }

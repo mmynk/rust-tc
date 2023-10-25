@@ -243,7 +243,7 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                                     opts.push(option);
                                 },
                                 netlink_tc::TcOpt::U32(nla) => {
-                                    let mut buf = vec![0u8; nla.buffer_len()];
+                                    let mut buf = vec![0u8; nla.value_len()];
                                     nla.emit_value(buf.as_mut_slice());
                                     let option = TcOption {
                                         kind: nla.kind(),
@@ -252,7 +252,7 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                                     opts.push(option);
                                 },
                                 netlink_tc::TcOpt::Matchall(nla) => {
-                                    let mut buf = vec![0u8; nla.buffer_len()];
+                                    let mut buf = vec![0u8; nla.value_len()];
                                     nla.emit_value(buf.as_mut_slice());
                                     let option = TcOption {
                                         kind: nla.kind(),
@@ -261,7 +261,7 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                                     opts.push(option);
                                 },
                                 netlink_tc::TcOpt::Other(nla) => {
-                                    let mut buf = vec![0u8; nla.buffer_len()];
+                                    let mut buf = vec![0u8; nla.value_len()];
                                     nla.emit_value(buf.as_mut_slice());
                                     let option = TcOption {
                                         kind: nla.kind(),
@@ -276,7 +276,7 @@ fn to_tc(tc_messages: Vec<TcMessage>) -> Vec<TcMsg> {
                         attrs.push(TcAttr::Options(opts));
                     }
                     netlink_tc::Nla::Stats(tc_stats) => {
-                        let mut buf = Vec::new();
+                        let mut buf = vec![0u8; tc_stats.buffer_len()];
                         tc_stats.emit(buf.as_mut_slice());
                         attrs.push(TcAttr::Stats(buf));
                     }
@@ -331,4 +331,293 @@ fn to_link(link_messages: Vec<LinkMessage>) -> Vec<LinkMsg> {
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::test_data;
+
+    #[test]
+    fn test_qdiscs_to_tc() {
+        let qdiscs = test_data::nl_qdiscs();
+        let tcs = to_tc(qdiscs);
+
+        // noqueue
+        // TcMessage { header: TcHeader { family: 0, index: 1, handle: 0, parent: 4294967295, info: 2 }, nlas: [Kind("noqueue"), HwOffload(0), Stats2([StatsBasic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), StatsQueue([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])]), Stats(Stats { bytes: 0, packets: 0, drops: 0, overlimits: 0, bps: 0, pps: 0, qlen: 0, backlog: 0 })] }
+        fn test_no_queue(tc: &TcMsg) {
+            // header
+            assert_eq!(tc.header.index, 1);
+            assert_eq!(tc.header.handle, 0);
+            assert_eq!(tc.header.parent, 4294967295);
+
+            // attr
+            let attrs = &tc.attrs;
+            for attr in attrs {
+                match attr {
+                    TcAttr::Kind(kind) => assert_eq!(kind, "noqueue"),
+                    TcAttr::Stats(bytes) => assert_eq!(bytes, &vec![0u8; 36]),
+                    TcAttr::Stats2(stats) => {
+                        for stat in stats {
+                            match stat {
+                                TcStats2::StatsBasic(bytes) => assert_eq!(bytes, &vec![0u8; 16]),
+                                TcStats2::StatsQueue(bytes) => assert_eq!(bytes, &vec![0u8; 20]),
+                                _ => (),
+                            }
+                        }
+                    }
+                    TcAttr::HwOffload(byte) => assert_eq!(byte, &0),
+                    _ => (),
+                }
+            }
+        }
+
+        // mq
+        // TcMessage { header: TcHeader { family: 0, index: 2, handle: 0, parent: 4294967295, info: 1 }, nlas: [Kind("mq"), HwOffload(0), Stats2([StatsBasic([28, 146, 82, 7, 0, 0, 0, 0, 119, 55, 6, 0, 0, 0, 0, 0]), StatsQueue([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0])]), Stats(Stats { bytes: 122851868, packets: 407415, drops: 0, overlimits: 0, bps: 0, pps: 0, qlen: 0, backlog: 0 })] }
+        fn test_mq(tc: &TcMsg) {
+            // header
+            assert_eq!(tc.header.index, 2);
+            assert_eq!(tc.header.handle, 0);
+            assert_eq!(tc.header.parent, 4294967295);
+
+            // attr
+            let attrs = &tc.attrs;
+            for attr in attrs {
+                match attr {
+                    TcAttr::Kind(kind) => assert_eq!(kind, "mq"),
+                    TcAttr::Stats(bytes) => {
+                        assert_eq!(bytes, &vec![
+                            28, 146, 82, 7, 0, 0, 0, 0,
+                            119, 55, 6, 0,
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                        ]);
+                    }
+                    TcAttr::Stats2(stats) => {
+                        for stat in stats {
+                            match stat {
+                                TcStats2::StatsBasic(bytes) => assert_eq!(bytes, &vec![
+                                    28, 146, 82, 7, 0, 0, 0, 0,
+                                    119, 55, 6, 0,
+                                    0, 0, 0, 0,
+                                ]),
+                                TcStats2::StatsQueue(bytes) => assert_eq!(bytes, &vec![
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    13, 0, 0, 0,
+                                ]),
+                                _ => (),
+                            }
+                        }
+                    }
+                    TcAttr::HwOffload(byte) => assert_eq!(byte, &0),
+                    _ => (),
+                }
+            }
+        }
+
+        // fq_codel
+        // TcMessage { header: TcHeader { family: 0, index: 2, handle: 0, parent: 2, info: 1 }, nlas: [Kind("fq_codel"), Options([Other(DefaultNla { kind: 1, value: [135, 19, 0, 0] }), Other(DefaultNla { kind: 2, value: [0, 40, 0, 0] }), Other(DefaultNla { kind: 3, value: [159, 134, 1, 0] }), Other(DefaultNla { kind: 4, value: [1, 0, 0, 0] }), Other(DefaultNla { kind: 6, value: [234, 5, 0, 0] }), Other(DefaultNla { kind: 8, value: [64, 0, 0, 0] }), Other(DefaultNla { kind: 9, value: [0, 0, 0, 2] }), Other(DefaultNla { kind: 5, value: [0, 4, 0, 0] })]), HwOffload(0), Stats2([StatsApp([0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), StatsBasic([76, 222, 96, 2, 0, 0, 0, 0, 55, 135, 2, 0, 0, 0, 0, 0]), StatsQueue([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0])]), Stats(Stats { bytes: 39902796, packets: 165687, drops: 0, overlimits: 0, bps: 0, pps: 0, qlen: 0, backlog: 0 }), XStats([0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])] }
+        fn test_fq_codel(tc: &TcMsg) {
+            // header
+            assert_eq!(tc.header.index, 2);
+            assert_eq!(tc.header.handle, 0);
+            assert_eq!(tc.header.parent, 2);
+
+            // attr
+            let attrs = &tc.attrs;
+            for attr in attrs {
+                match attr {
+                    TcAttr::Kind(kind) => assert_eq!(kind, "fq_codel"),
+                    TcAttr::Options(opts) => {
+                        for opt in opts {
+                            match opt {
+                                TcOption { kind, bytes } => {
+                                    match kind {
+                                        1 => assert_eq!(bytes, &vec![135, 19, 0, 0]),
+                                        2 => assert_eq!(bytes, &vec![0, 40, 0, 0]),
+                                        3 => assert_eq!(bytes, &vec![159, 134, 1, 0]),
+                                        4 => assert_eq!(bytes, &vec![1, 0, 0, 0]),
+                                        5 => assert_eq!(bytes, &vec![0, 4, 0, 0]),
+                                        6 => assert_eq!(bytes, &vec![234, 5, 0, 0]),
+                                        8 => assert_eq!(bytes, &vec![64, 0, 0, 0]),
+                                        9 => assert_eq!(bytes, &vec![0, 0, 0, 2]),
+                                        _ => (),
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    TcAttr::Stats(bytes) => assert_eq!(bytes, &vec![
+                        76, 222, 96, 2, 0, 0, 0, 0,
+                        55, 135, 2, 0,
+                        0, 0, 0, 0,
+                        0, 0, 0, 0,
+                        0, 0, 0, 0,
+                        0, 0, 0, 0,
+                        0, 0, 0, 0,
+                        0, 0, 0, 0,
+                    ]),
+                    TcAttr::Stats2(stats) => {
+                        for stat in stats {
+                            match stat {
+                                TcStats2::StatsBasic(bytes) => assert_eq!(bytes, &vec![
+                                    76, 222, 96, 2, 0, 0, 0, 0,
+                                    55, 135, 2, 0,
+                                    0, 0, 0, 0,
+                                ]),
+                                TcStats2::StatsQueue(bytes) => assert_eq!(bytes, &vec![
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    7, 0, 0, 0,
+                                ]),
+                                TcStats2::StatsApp(bytes) => assert_eq!(bytes, &vec![
+                                    0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                ]),
+                            }
+                        }
+                    }
+                    TcAttr::Xstats(bytes) => assert_eq!(bytes, &vec![
+                        0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ]),
+                    TcAttr::HwOffload(byte) => assert_eq!(byte, &0),
+                    _ => (),
+                }
+            }
+        }
+
+        // htb
+        // TcMessage { header: TcHeader { family: 0, index: 3, handle: 65536, parent: 4294967295, info: 2 }, nlas: [Kind("htb"), Options([Other(DefaultNla { kind: 2, value: [17, 0, 3, 0, 10, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }), Other(DefaultNla { kind: 5, value: [232, 3, 0, 0] })]), HwOffload(0), Stats2([StatsBasic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), StatsQueue([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])]), Stats(Stats { bytes: 0, packets: 0, drops: 0, overlimits: 0, bps: 0, pps: 0, qlen: 0, backlog: 0 })] }
+        fn test_htb(tc: &TcMsg) {
+            // header
+            assert_eq!(tc.header.index, 3);
+            assert_eq!(tc.header.handle, 65536);
+            assert_eq!(tc.header.parent, 4294967295);
+
+            // attr
+            let attrs = &tc.attrs;
+            for attr in attrs {
+                match attr {
+                    TcAttr::Kind(kind) => assert_eq!(kind, "htb"),
+                    TcAttr::Options(opts) => {
+                        for opt in opts {
+                            match opt {
+                                TcOption { kind, bytes } => {
+                                    match kind {
+                                        2 => assert_eq!(bytes, &vec![
+                                            17, 0, 3, 0,
+                                            10, 0, 0, 0,
+                                            32, 0, 0, 0,
+                                            0, 0, 0, 0,
+                                            0, 0, 0, 0,
+                                        ]),
+                                        5 => assert_eq!(bytes, &vec![232, 3, 0, 0]),
+                                        _ => (),
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    TcAttr::Stats(bytes) => assert_eq!(bytes, &vec![0u8; 36]),
+                    TcAttr::Stats2(stats2) => {
+                        for stat in stats2 {
+                            match stat {
+                                TcStats2::StatsBasic(bytes) => assert_eq!(bytes, &vec![0u8; 16]),
+                                TcStats2::StatsQueue(bytes) => assert_eq!(bytes, &vec![0u8; 20]),
+                                _ => (),
+                            }
+                        }
+                    }
+                    TcAttr::HwOffload(byte) => assert_eq!(byte, &0),
+                    _ => (),
+                }
+            }
+        }
+
+        test_no_queue(tcs.get(0).unwrap());
+        test_mq(tcs.get(1).unwrap());
+        test_fq_codel(tcs.get(2).unwrap());
+        test_htb(tcs.get(3).unwrap());
+    }
+
+    #[test]
+    fn test_classes_to_tc() {
+        let classes = test_data::nl_classes();
+        let tcs = to_tc(classes);
+
+        // htb
+        // TcMessage { header: TcHeader { family: 0, index: 3, handle: 65537, parent: 4294967295, info: 0 }, nlas: [Kind("htb"), Options([Other(DefaultNla { kind: 1, value: [0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0, 64, 13, 3, 0, 64, 13, 3, 0, 212, 48, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0] })]), Stats2([StatsBasic([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), StatsQueue([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), StatsApp([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13, 3, 0])]), Stats(Stats { bytes: 0, packets: 0, drops: 0, overlimits: 0, bps: 0, pps: 0, qlen: 0, backlog: 0 }), XStats([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13, 3, 0])] }
+        fn test_htb(tc: &TcMsg) {
+            // header
+            assert_eq!(tc.header.index, 3);
+            assert_eq!(tc.header.handle, 65537);
+            assert_eq!(tc.header.parent, 4294967295);
+
+            // attr
+            let attrs = &tc.attrs;
+            for attr in attrs {
+                match attr {
+                    TcAttr::Kind(kind) => assert_eq!(kind, "htb"),
+                    TcAttr::Options(opts) => {
+                        for opt in opts {
+                            match opt {
+                                TcOption { kind, bytes } => {
+                                    match kind {
+                                        1 => assert_eq!(bytes, &vec![
+                                            0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0,
+                                            64, 13, 3, 0, 64, 13, 3, 0, 212, 48, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0,
+                                        ]),
+                                        _ => (),
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    TcAttr::Stats(bytes) => assert_eq!(bytes, &vec![0u8; 36]),
+                    TcAttr::Stats2(stats2) => {
+                        for stat in stats2 {
+                            match stat {
+                                TcStats2::StatsBasic(bytes) => assert_eq!(bytes, &vec![0u8; 16]),
+                                TcStats2::StatsQueue(bytes) => assert_eq!(bytes, &vec![0u8; 20]),
+                                TcStats2::StatsApp(bytes) => assert_eq!(bytes, &vec![
+                                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13, 3, 0,
+                                ]),
+                            }
+                        }
+                    }
+                    TcAttr::Xstats(bytes) => assert_eq!(bytes, &vec![
+                        0, 0, 0, 0,
+                        0, 0, 0, 0,
+                        0, 0, 0, 0,
+                        64, 13, 3, 0,
+                        64, 13, 3, 0,
+                    ]),
+                    _ => (),
+                }
+            }
+        }
+
+        test_htb(tcs.get(0).unwrap());
+    }
+
+    #[test]
+    fn test_to_link() {
+        let links = test_data::nl_links();
+        let link_msgs = to_link(links);
+
+        let link = link_msgs.get(0).unwrap();
+        assert_eq!(link.header.index, 1);
+        assert_eq!(link.attr.name, "eth0");
+    }
 }
