@@ -7,7 +7,7 @@ fn test_get_qdiscs() {
     let tcs = result.unwrap();
     for tc in tcs {
         let attr = tc.attr;
-        assert!(attr.kind.is_some());
+        assert!(!attr.kind.is_empty());
         assert!(attr.stats.is_some());
         assert!(attr.stats2.is_some());
     }

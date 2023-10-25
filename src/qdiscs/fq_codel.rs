@@ -1,16 +1,7 @@
-use netlink_packet_utils::nla::{self, Nla};
 use serde::{Deserialize, Serialize};
 
-use crate::{constants::ATTR_LEN, errors::TcError};
+use crate::{errors::TcError, TcOption};
 
-/// FQ_Codel (Fair Queuing Controlled Delay) is queuing discipline
-/// that combines Fair Queuing with the CoDel AQM scheme.
-/// FQ_Codel uses a stochastic model to classify incoming packets into
-/// different flows and is used to provide a fair share of the
-/// bandwidth to all the flows using the queue.
-/// Each such flow is managed by the CoDel queuing discipline.
-/// Reordering within a flow is avoided since Codel internally uses a FIFO queue.
-///
 /// Defined in `include/uapi/linux/sch_fq_codel.c`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FqCodel {
@@ -26,8 +17,8 @@ pub struct FqCodel {
 }
 
 impl FqCodel {
-    pub fn new(nla: Vec<&nla::DefaultNla>) -> Self {
-        unmarshal_fq_codel(nla)
+    pub fn new(opts: Vec<TcOption>) -> Self {
+        unmarshal_fq_codel(opts)
     }
 }
 
@@ -85,23 +76,26 @@ impl From<u16> for TcaFqCodel {
     }
 }
 
-fn unmarshal_fq_codel(nlas: Vec<&nla::DefaultNla>) -> FqCodel {
+fn unmarshal_fq_codel(opts: Vec<TcOption>) -> FqCodel {
     let mut fq = FqCodel::default();
 
-    let mut buf = [0u8; ATTR_LEN];
-    for nla in nlas {
-        let kind = TcaFqCodel::from(nla.kind());
-        nla.emit_value(&mut buf[..]);
+    for opt in opts {
+        let kind = TcaFqCodel::from(opt.kind);
+        if opt.bytes.len() < 4 {
+            // TODO: log error
+            continue;
+        }
+        let value = u32::from_ne_bytes(opt.bytes[..4].try_into().unwrap());
         match kind {
-            TcaFqCodel::Target => fq.target = u32::from_ne_bytes(buf),
-            TcaFqCodel::Limit => fq.limit = u32::from_ne_bytes(buf),
-            TcaFqCodel::Interval => fq.interval = u32::from_ne_bytes(buf),
-            TcaFqCodel::Ecn => fq.ecn = u32::from_ne_bytes(buf),
-            TcaFqCodel::Flows => fq.flows = u32::from_ne_bytes(buf),
-            TcaFqCodel::Quantum => fq.quantum = u32::from_ne_bytes(buf),
-            TcaFqCodel::CeThreshold => fq.ce_threshold = u32::from_ne_bytes(buf),
-            TcaFqCodel::DropBatchSize => fq.drop_batch_size = u32::from_ne_bytes(buf),
-            TcaFqCodel::MemoryLimit => fq.memory_limit = u32::from_ne_bytes(buf),
+            TcaFqCodel::Target => fq.target = value,
+            TcaFqCodel::Limit => fq.limit = value,
+            TcaFqCodel::Interval => fq.interval = value,
+            TcaFqCodel::Ecn => fq.ecn = value,
+            TcaFqCodel::Flows => fq.flows = value,
+            TcaFqCodel::Quantum => fq.quantum = value,
+            TcaFqCodel::CeThreshold => fq.ce_threshold = value,
+            TcaFqCodel::DropBatchSize => fq.drop_batch_size = value,
+            TcaFqCodel::MemoryLimit => fq.memory_limit = value,
             _ => (),
         }
     }
