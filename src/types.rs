@@ -151,7 +151,7 @@ pub struct RateSpec {
 }
 
 pub fn unmarshal_rate_spec(buf: &[u8]) -> Result<RateSpec, TcError> {
-    bincode::deserialize(buf).map_err(|e| TcError::UnmarshalStruct(e))
+    bincode::deserialize(buf).map_err(TcError::UnmarshalStruct)
 }
 
 /// A subset of structs defined in `include/uapi/linux/if_link.h`.

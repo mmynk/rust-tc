@@ -114,7 +114,7 @@ fn unmarshal_fq_codel_xstats(bytes: &[u8]) -> Result<FqCodelXStats, TcError> {
         .map_err(|_| TcError::Decode("Failed to extract FqCodel XStats kind".to_string()))?;
     let kind = u32::from_ne_bytes(buf);
     if kind == 0 {
-        bincode::deserialize(&bytes[4..]).map_err(|e| TcError::UnmarshalStruct(e))
+        bincode::deserialize(&bytes[4..]).map_err(TcError::UnmarshalStruct)
     } else {
         Err(TcError::InvalidAttribute(format!(
             "FqCodel XStats has unidentified kind: {kind}"
