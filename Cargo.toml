@@ -1,6 +1,6 @@
 [package]
 name = "netlink-tc"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Mohit Mayank"]
 edition = "2021"
 description = "A Rust library for interacting with the Linux Traffic Control (tc) subsystem using Netlink"
