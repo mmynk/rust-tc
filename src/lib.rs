@@ -9,16 +9,14 @@
 //! ```rust
 //! use netlink_tc as tc;
 //!
-//! fn main() {
-//!     // Get list of qdiscs
-//!     let qdiscs = tc::qdiscs().unwrap();
+//! // Get list of qdiscs
+//! let qdiscs = tc::qdiscs().unwrap();
 //!
-//!     // Get list of classes
-//!     let classes = tc::classes().unwrap();
+//! // Get list of classes
+//! let classes = tc::classes().unwrap();
 //!
-//!     // Get class for given interface
-//!     let class = tc::class("eth0").unwrap();
-//! }
+//! // Get class for given interface
+//! let class = tc::class("eth0").unwrap();
 //! ```
 
 pub mod link;

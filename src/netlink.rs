@@ -331,9 +331,8 @@ fn to_link(link_messages: Vec<LinkMessage>) -> Vec<LinkMsg> {
 
             let mut name = String::new();
             for nla in nlas {
-                match nla {
-                    link::nlas::Nla::IfName(if_name) => name = if_name,
-                    _ => (),
+                if let link::nlas::Nla::IfName(if_name) = nla {
+                    name = if_name;
                 }
             }
 

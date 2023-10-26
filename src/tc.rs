@@ -31,9 +31,9 @@ pub fn qdiscs<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
             match attr {
                 TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
                 TcAttr::Options(opts) => options = opts.to_vec(),
-                TcAttr::Stats(bytes) => attribute.stats = parse_stats(&bytes).ok(),
+                TcAttr::Stats(bytes) => attribute.stats = parse_stats(bytes).ok(),
                 TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
-                TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(&stats).ok(),
+                TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
                 _ => (),
             }
         }
@@ -70,7 +70,7 @@ pub fn class_for_index<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<
             match attr {
                 TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
                 TcAttr::Options(tc_opts) => opts = tc_opts.to_vec(),
-                TcAttr::Stats(bytes) => attribute.stats = parse_stats(&bytes).ok(),
+                TcAttr::Stats(bytes) => attribute.stats = parse_stats(bytes).ok(),
                 TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
                 TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
                 _ => (),
@@ -123,7 +123,7 @@ pub fn tc_stats<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
 }
 
 fn parse_stats(bytes: &[u8]) -> Result<Stats, TcError> {
-    bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))
+    bincode::deserialize(bytes).map_err(TcError::UnmarshalStruct)
 }
 
 fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
@@ -144,7 +144,7 @@ fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
         }
     }
 
-    if errors.len() > 0 {
+    if !errors.is_empty() {
         let message = errors.join(", ");
         Err(TcError::UnmarshalStructs(message))
     } else {
@@ -156,7 +156,7 @@ fn parse_qdiscs(kind: &str, opts: Vec<TcOption>) -> Option<QDisc> {
     match kind {
         FQ_CODEL => Some(QDisc::FqCodel(FqCodel::new(opts))),
         CLSACT => Some(QDisc::Clsact(Clsact {})),
-        HTB => Htb::new(opts).init.and_then(|htb| Some(QDisc::Htb(htb))),
+        HTB => Htb::new(opts).init.map(QDisc::Htb),
         _ => None,
     }
 }
@@ -170,8 +170,8 @@ fn parse_classes(kind: &str, opts: Vec<TcOption>) -> Option<Class> {
 
 fn parse_xstats(kind: &str, bytes: &[u8]) -> Result<XStats, TcError> {
     match kind {
-        FQ_CODEL => FqCodelXStats::new(&bytes).and_then(|x| Ok(XStats::FqCodel(x))),
-        HTB => HtbXstats::new(&bytes).and_then(|x| Ok(XStats::Htb(x))),
+        FQ_CODEL => FqCodelXStats::new(bytes).map(XStats::FqCodel),
+        HTB => HtbXstats::new(bytes).map(XStats::Htb),
         _ => Err(TcError::UnimplementedAttribute(format!(
             "XStats for {kind}"
         ))),

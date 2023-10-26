@@ -84,8 +84,7 @@ impl Htb {
 
 impl HtbXstats {
     pub fn new(bytes: &[u8]) -> Result<Self, TcError> {
-        let result = unmarshal_htb_xstats(bytes);
-        result
+        unmarshal_htb_xstats(bytes)
     }
 }
 
@@ -137,13 +136,13 @@ fn unmarshal_htb(opts: Vec<TcOption>) -> Htb {
 }
 
 fn unmarshal_htb_opt(bytes: &[u8]) -> Result<HtbOpt, TcError> {
-    bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))
+    bincode::deserialize(bytes).map_err(TcError::UnmarshalStruct)
 }
 
 fn unmarshal_htb_glob(bytes: &[u8]) -> Result<HtbGlob, TcError> {
-    bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))
+    bincode::deserialize(bytes).map_err(TcError::UnmarshalStruct)
 }
 
 fn unmarshal_htb_xstats(bytes: &[u8]) -> Result<HtbXstats, TcError> {
-    bincode::deserialize(bytes).map_err(|e| TcError::UnmarshalStruct(e))
+    bincode::deserialize(bytes).map_err(TcError::UnmarshalStruct)
 }
