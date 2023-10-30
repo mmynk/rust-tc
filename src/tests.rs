@@ -27,7 +27,7 @@ impl NetlinkConnection for MockNetlink {
 
 #[test]
 fn test_no_queue() {
-    let stats = nl_qdiscs::<MockNetlink>().unwrap();
+    let stats = qdiscs::<MockNetlink>().unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -48,7 +48,7 @@ fn test_no_queue() {
 
 #[test]
 fn test_mq() {
-    let stats = nl_qdiscs::<MockNetlink>().unwrap();
+    let stats = qdiscs::<MockNetlink>().unwrap();
 
     let tc = stats.get(1).unwrap();
     // message
@@ -70,7 +70,7 @@ fn test_mq() {
 
 #[test]
 fn test_fq_codel() {
-    let stats = nl_qdiscs::<MockNetlink>().unwrap();
+    let stats = qdiscs::<MockNetlink>().unwrap();
 
     let tc = stats.get(2).unwrap();
     // message
@@ -125,7 +125,7 @@ fn test_fq_codel() {
 
 #[test]
 fn test_htb() {
-    let tc_stats = nl_tc_stats::<MockNetlink>().unwrap();
+    let tc_stats = tc_stats::<MockNetlink>().unwrap();
 
     let tc = tc_stats.get(3).unwrap();
     // message
