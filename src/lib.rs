@@ -19,13 +19,13 @@
 //! let class = tc::class::<tc::Netlink>("eth0").unwrap();
 //! ```
 
+pub mod errors;
 pub mod link;
 pub mod tc;
 pub mod types;
 
 mod class;
 mod constants;
-mod errors;
 mod netlink;
 mod qdiscs;
 
