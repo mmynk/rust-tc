@@ -11,13 +11,13 @@ use netlink_tc as tc;
 
 fn main() {
     // Get list of qdiscs
-    let qdiscs = tc::qdiscs().unwrap();
+    let qdiscs = tc::qdiscs::<tc::Netlink>().unwrap();
 
     // Get list of classes
-    let classes = tc::classes().unwrap();
+    let classes = tc::classes::<tc::Netlink>().unwrap();
 
     // Get class for given interface
-    let class = tc::class("eth0").unwrap();
+    let class = tc::class::<tc::Netlink>("eth0").unwrap();
 }
 ```
 
