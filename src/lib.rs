@@ -7,17 +7,19 @@
 //! ## Example
 //!
 //! ```rust
+//! use netlink_packet_core::NetlinkMessage;
+//! use netlink_packet_route::RtnlMessage;
 //! use netlink_tc as tc;
 //!
 //! // Retrive netlink messages using `netlink-packet-route`.
 //! // See `examples` for more details.
-//! let messages: Vec<NetlinkMessage<RtnlMessage>>; // = ...
+//! let messages: Vec<NetlinkMessage<RtnlMessage>> = vec![]; // init with netlink messages
 //!
 //! // Get list of tc qdiscs or classes
-//! let qdiscs = tc::tc_stats(messages).unwrap();
+//! let qdiscs = tc::tc_stats(messages.clone()).unwrap();
 //!
 //! // Get list of links
-//! let links = tc::links(messages).unwrap();
+//! let links = tc::links(messages.clone()).unwrap();
 //! ```
 
 pub use class::*;
