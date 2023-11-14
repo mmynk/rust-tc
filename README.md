@@ -7,17 +7,20 @@ This library is very much in progress. It only supports a small subset of `class
 ## Usage
 
 ```rust
+use netlink_packet_core::NetlinkMessage;
+use netlink_packet_route::RtnlMessage;
 use netlink_tc as tc;
 
 fn main() {
-    // Get list of qdiscs
-    let qdiscs = tc::qdiscs::<tc::Netlink>().unwrap();
+    // Retrive netlink messages using `netlink-packet-route`.
+    // See `examples` for more details.
+    let messages: Vec<NetlinkMessage<RtnlMessage>> = vec![]; // init with netlink messages
 
-    // Get list of classes
-    let classes = tc::classes::<tc::Netlink>().unwrap();
+    // Get list of tc qdiscs or classes
+    let qdiscs = tc::tc_stats(messages.clone()).unwrap();
 
-    // Get class for given interface
-    let class = tc::class::<tc::Netlink>("eth0").unwrap();
+    // Get list of links
+    let links = tc::links(messages.clone()).unwrap();
 }
 ```
 
