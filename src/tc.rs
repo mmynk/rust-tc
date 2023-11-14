@@ -2,122 +2,86 @@ use crate::{
     class::htb::Htb,
     constants::*,
     errors::TcError,
-    link, netlink,
     qdiscs::{
         clsact::Clsact,
         fq_codel::{FqCodel, FqCodelXStats},
     },
     types::*,
-    HtbXstats,
+    HtbXstats, RtNetlinkMessage,
 };
 
-/// `qdiscs` returns a list of all qdiscs on the system.
-/// The underlying implementation makes a netlink call with the `RTM_GETQDISC` command.
-pub fn qdiscs<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
-    let mut tcs = Vec::new();
+/// `qdiscs` returns a list of queuing disciplines by parsing the passed `TcMsg` vector.
+pub fn qdiscs(message: TcMsg) -> Result<Tc, TcError> {
+    let tc = TcMessage {
+        index: message.header.index as u32,
+        handle: message.header.handle,
+        parent: message.header.parent,
+    };
+    let mut attribute = Attribute::default();
 
-    let messages = T::new()?.qdiscs()?;
-    for message in &messages {
-        let tc = TcMessage {
-            index: message.header.index as u32,
-            handle: message.header.handle,
-            parent: message.header.parent,
-        };
-        let mut attribute = Attribute::default();
-
-        let mut options = Vec::new();
-        let mut xstats = Vec::new();
-        for attr in &message.attrs {
-            match attr {
-                TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
-                TcAttr::Options(opts) => options = opts.to_vec(),
-                TcAttr::Stats(bytes) => attribute.stats = parse_stats(bytes).ok(),
-                TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
-                TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
-                _ => (),
-            }
+    let mut options = Vec::new();
+    let mut xstats = Vec::new();
+    for attr in &message.attrs {
+        match attr {
+            TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
+            TcAttr::Options(opts) => options = opts.to_vec(),
+            TcAttr::Stats(bytes) => attribute.stats = parse_stats(bytes).ok(),
+            TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
+            TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
+            _ => (),
         }
-
-        attribute.qdisc = parse_qdiscs(attribute.kind.as_str(), options);
-        attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
-
-        tcs.push(Tc {
-            msg: tc,
-            attr: attribute,
-        });
     }
 
-    Ok(tcs)
+    attribute.qdisc = parse_qdiscs(attribute.kind.as_str(), options);
+    attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
+
+    Ok(Tc {
+        msg: tc,
+        attr: attribute,
+    })
 }
 
-/// `class_for_index` returns a list of all classes for a given interface index.
-/// The underlying implementation makes a netlink call with the `RTM_GETCLASS` command.
-pub fn class_for_index<T: netlink::NetlinkConnection>(index: u32) -> Result<Vec<Tc>, TcError> {
-    let mut tcs = Vec::new();
+/// `classes` returns a list of traffic control classes by parsing the passed `TcMsg` vector.
+pub fn classes(message: TcMsg) -> Result<Tc, TcError> {
+    let tc = TcMessage {
+        index: message.header.index as u32,
+        handle: message.header.handle,
+        parent: message.header.parent,
+    };
+    let mut attribute = Attribute::default();
 
-    let messages = T::new()?.classes(index as i32)?;
-    for message in &messages {
-        let tc = TcMessage {
-            index,
-            handle: message.header.handle,
-            parent: message.header.parent,
-        };
-        let mut attribute = Attribute::default();
-
-        let mut opts = vec![];
-        let mut xstats = Vec::new();
-        for attr in &message.attrs {
-            match attr {
-                TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
-                TcAttr::Options(tc_opts) => opts = tc_opts.to_vec(),
-                TcAttr::Stats(bytes) => attribute.stats = parse_stats(bytes).ok(),
-                TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
-                TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
-                _ => (),
-            }
+    let mut opts = vec![];
+    let mut xstats = Vec::new();
+    for attr in &message.attrs {
+        match attr {
+            TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
+            TcAttr::Options(tc_opts) => opts = tc_opts.to_vec(),
+            TcAttr::Stats(bytes) => attribute.stats = parse_stats(bytes).ok(),
+            TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
+            TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
+            _ => (),
         }
-
-        attribute.class = parse_classes(attribute.kind.as_str(), opts);
-        attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
-
-        tcs.push(Tc {
-            msg: tc,
-            attr: attribute,
-        });
     }
 
-    Ok(tcs)
+    attribute.class = parse_classes(attribute.kind.as_str(), opts);
+    attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
+
+    Ok(Tc {
+        msg: tc,
+        attr: attribute,
+    })
 }
 
-/// `class` returns a list of all classes for a given interface name.
-/// It retrieves the list of links and then calls `class_for_index`
-/// for the link with the matching name.
-pub fn class<T: netlink::NetlinkConnection>(name: &str) -> Result<Vec<Tc>, TcError> {
-    let links = link::links::<T>()?;
+pub fn tc_stats(messages: Vec<RtNetlinkMessage>) -> Result<Vec<Tc>, TcError> {
+    let mut tcs = Vec::with_capacity(messages.len());
 
-    if let Some(link) = links.iter().find(|link| link.name == name) {
-        class_for_index::<T>(link.index)
-    } else {
-        Ok(Vec::new())
+    for message in messages {
+        match message {
+            RtNetlinkMessage::GetQdisc(message) => tcs.push(qdiscs(message)?),
+            RtNetlinkMessage::GetClass(message) => tcs.push(classes(message)?),
+            _ => {}
+        }
     }
-}
-
-/// `classes` returns a list of all classes on the system.
-/// It retrieves the list of links and then calls `classes` for each link.
-pub fn classes<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
-    let mut tcs = Vec::new();
-
-    let links = link::links::<T>()?;
-    for link in links {
-        tcs.append(&mut class_for_index::<T>(link.index)?);
-    }
-
-    Ok(tcs)
-}
-
-pub fn tc_stats<T: netlink::NetlinkConnection>() -> Result<Vec<Tc>, TcError> {
-    let mut tcs = qdiscs::<T>()?;
-    tcs.append(&mut classes::<T>()?);
 
     Ok(tcs)
 }
