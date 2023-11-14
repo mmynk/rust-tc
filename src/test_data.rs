@@ -1,7 +1,6 @@
-use netlink_packet_route::{nlas, tc, LinkMessage, TcHeader as NlTcHeader, TcMessage};
+use netlink_packet_core::{NetlinkHeader, NetlinkMessage, NetlinkPayload};
+use netlink_packet_route::{nlas, tc, LinkMessage, RtnlMessage, TcHeader as NlTcHeader, TcMessage};
 use netlink_packet_utils::{nla, Parseable};
-
-use crate::types::*;
 
 pub fn nl_qdiscs() -> Vec<TcMessage> {
     let mut messages = Vec::with_capacity(3);
@@ -316,6 +315,43 @@ pub fn nl_links() -> Vec<LinkMessage> {
     vec![msg]
 }
 
+pub fn get_qdiscs() -> Vec<NetlinkMessage<RtnlMessage>> {
+    nl_qdiscs()
+        .into_iter()
+        .map(|qdisc| {
+            NetlinkMessage::new(
+                NetlinkHeader::default(),
+                NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(qdisc)),
+            )
+        })
+        .collect()
+}
+
+pub fn get_classes() -> Vec<NetlinkMessage<RtnlMessage>> {
+    nl_classes()
+        .into_iter()
+        .map(|class| {
+            NetlinkMessage::new(
+                NetlinkHeader::default(),
+                NetlinkPayload::InnerMessage(RtnlMessage::NewTrafficClass(class)),
+            )
+        })
+        .collect()
+}
+
+pub fn get_links() -> Vec<NetlinkMessage<RtnlMessage>> {
+    nl_links()
+        .into_iter()
+        .map(|link| {
+            NetlinkMessage::new(
+                NetlinkHeader::default(),
+                NetlinkPayload::InnerMessage(RtnlMessage::NewLink(link)),
+            )
+        })
+        .collect()
+}
+
+/*
 pub fn qdiscs() -> Vec<TcMsg> {
     let mut qdiscs = Vec::with_capacity(4);
 
@@ -338,7 +374,7 @@ pub fn qdiscs() -> Vec<TcMsg> {
     });
 
     // mq
-    qdiscs.push(TcMsg {
+    qdiscs.push(TcMessage {
         header: TcHeader {
             index: 2,
             handle: 0,
@@ -361,7 +397,7 @@ pub fn qdiscs() -> Vec<TcMsg> {
     });
 
     // fq_codel
-    qdiscs.push(TcMsg {
+    qdiscs.push(TcMessage {
         header: TcHeader {
             index: 2,
             handle: 0,
@@ -426,7 +462,7 @@ pub fn qdiscs() -> Vec<TcMsg> {
     });
 
     // htb
-    qdiscs.push(TcMsg {
+    qdiscs.push(TcMessage {
         header: TcHeader {
             index: 3,
             handle: 65536,
@@ -458,10 +494,10 @@ pub fn qdiscs() -> Vec<TcMsg> {
     qdiscs
 }
 
-pub fn classes() -> Vec<TcMsg> {
+pub fn classes() -> Vec<TcMessage> {
     let mut classes = Vec::with_capacity(1);
 
-    classes.push(TcMsg {
+    classes.push(TcMessage {
         header: TcHeader {
             index: 3,
             handle: 65537,
@@ -503,3 +539,4 @@ pub fn links() -> Vec<LinkMsg> {
         },
     }]
 }
+ */

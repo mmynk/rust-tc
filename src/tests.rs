@@ -1,33 +1,11 @@
-use crate::{errors::NetlinkError, netlink::NetlinkConnection};
-
 use super::*;
 
-struct MockNetlink {}
-
-impl NetlinkConnection for MockNetlink {
-    fn new() -> Result<Self, NetlinkError>
-    where
-        Self: Sized,
-    {
-        Ok(MockNetlink {})
-    }
-
-    fn qdiscs(&self) -> Result<Vec<TcMsg>, NetlinkError> {
-        Ok(test_data::qdiscs())
-    }
-
-    fn classes(&self, _: i32) -> Result<Vec<TcMsg>, NetlinkError> {
-        Ok(test_data::classes())
-    }
-
-    fn links(&self) -> Result<Vec<LinkMsg>, NetlinkError> {
-        Ok(test_data::links())
-    }
-}
+use crate::test_data::{get_classes, get_links, get_qdiscs};
 
 #[test]
 fn test_no_queue() {
-    let stats = qdiscs::<MockNetlink>().unwrap();
+    let messages = vec![get_qdiscs()[0].clone()];
+    let stats = tc_stats(messages).unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -48,9 +26,10 @@ fn test_no_queue() {
 
 #[test]
 fn test_mq() {
-    let stats = qdiscs::<MockNetlink>().unwrap();
+    let messages = vec![get_qdiscs()[1].clone()];
+    let stats = tc_stats(messages).unwrap();
 
-    let tc = stats.get(1).unwrap();
+    let tc = stats.get(0).unwrap();
     // message
     assert_eq!(tc.msg.index, 2);
     assert_eq!(tc.msg.handle, 0);
@@ -70,9 +49,10 @@ fn test_mq() {
 
 #[test]
 fn test_fq_codel() {
-    let stats = qdiscs::<MockNetlink>().unwrap();
+    let messages = vec![get_qdiscs()[2].clone()];
+    let stats = tc_stats(messages).unwrap();
 
-    let tc = stats.get(2).unwrap();
+    let tc = stats.get(0).unwrap();
     // message
     assert_eq!(tc.msg.index, 2);
     assert_eq!(tc.msg.handle, 0);
@@ -125,9 +105,12 @@ fn test_fq_codel() {
 
 #[test]
 fn test_htb() {
-    let tc_stats = tc_stats::<MockNetlink>().unwrap();
+    let qdiscs = get_qdiscs();
+    let classes = get_classes();
+    let messages = vec![qdiscs[3].clone(), classes[0].clone()];
+    let tc_stats = tc_stats(messages).unwrap();
 
-    let tc = tc_stats.get(3).unwrap();
+    let tc = tc_stats.get(0).unwrap();
     // message
     assert_eq!(tc.msg.index, 3);
     assert_eq!(tc.msg.handle, 65536);
@@ -155,7 +138,7 @@ fn test_htb() {
         })
     );
 
-    let tc = tc_stats.get(4).unwrap();
+    let tc = tc_stats.get(1).unwrap();
     // message
     assert_eq!(tc.msg.index, 3);
     assert_eq!(tc.msg.handle, 65537);
@@ -209,4 +192,12 @@ fn test_htb() {
             ctokens: 200000,
         })
     );
+}
+
+#[test]
+fn test_links() {
+    let links = links(get_links()).unwrap();
+
+    assert_eq!(links[0].index, 1);
+    assert_eq!(links[0].name, "eth0");
 }
