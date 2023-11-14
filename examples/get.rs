@@ -2,19 +2,20 @@ use netlink_packet_core::{
     NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP, NLM_F_REQUEST,
 };
 use netlink_packet_route::{LinkMessage, RtnlMessage, TcHeader, TcMessage};
-use netlink_sys::{Socket, protocols::NETLINK_ROUTE, SocketAddr};
+use netlink_sys::{protocols::NETLINK_ROUTE, Socket, SocketAddr};
 use netlink_tc::{errors::NetlinkError, links, tc_stats};
 
 fn socket() -> Result<Socket, NetlinkError> {
-    let socket =
-        Socket::new(NETLINK_ROUTE).map_err(|err| NetlinkError::Socket(Box::new(err)))?;
+    let socket = Socket::new(NETLINK_ROUTE).map_err(|err| NetlinkError::Socket(Box::new(err)))?;
     socket
         .connect(&SocketAddr::new(0, 0))
         .map_err(|err| NetlinkError::Socket(Box::new(err)))?;
     Ok(socket)
 }
 
-fn receive_netlink_messages(message: RtnlMessage) -> Result<Vec<NetlinkMessage<RtnlMessage>>, NetlinkError> {
+fn receive_netlink_messages(
+    message: RtnlMessage,
+) -> Result<Vec<NetlinkMessage<RtnlMessage>>, NetlinkError> {
     let socket = socket()?;
     send_request(&socket, message)?;
 
@@ -68,10 +69,7 @@ fn send_request(socket: &Socket, message: RtnlMessage) -> Result<(), NetlinkErro
     let mut nl_hdr = NetlinkHeader::default();
     nl_hdr.flags = NLM_F_REQUEST | NLM_F_DUMP;
 
-    let mut packet = NetlinkMessage::new(
-        nl_hdr,
-        NetlinkPayload::from(message),
-    );
+    let mut packet = NetlinkMessage::new(nl_hdr, NetlinkPayload::from(message));
     packet.finalize();
 
     let mut buf = vec![0; packet.header.length as usize];

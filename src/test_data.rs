@@ -103,42 +103,16 @@ pub fn nl_qdiscs() -> Vec<TcMessage> {
     };
     let nlas = vec![
         tc::nlas::Nla::Kind("fq_codel".to_string()),
-        tc::nlas::Nla::Options({
-            let mut opts = Vec::with_capacity(8);
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
-                1,
-                vec![135, 19, 0, 0],
-            )));
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
-                2,
-                vec![0, 40, 0, 0],
-            )));
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
-                3,
-                vec![159, 134, 1, 0],
-            )));
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
-                4,
-                vec![1, 0, 0, 0],
-            )));
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
-                6,
-                vec![234, 5, 0, 0],
-            )));
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
-                8,
-                vec![64, 0, 0, 0],
-            )));
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
-                9,
-                vec![0, 0, 0, 2],
-            )));
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
-                5,
-                vec![0, 4, 0, 0],
-            )));
-            opts
-        }),
+        tc::nlas::Nla::Options(vec![
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(1, vec![135, 19, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(2, vec![0, 40, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(3, vec![159, 134, 1, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(4, vec![1, 0, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(6, vec![234, 5, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(8, vec![64, 0, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(9, vec![0, 0, 0, 2])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(5, vec![0, 4, 0, 0])),
+        ]),
         tc::nlas::Nla::HwOffload(0),
         tc::nlas::Nla::Stats2(vec![
             tc::nlas::Stats2::StatsApp(vec![
@@ -190,9 +164,8 @@ pub fn nl_qdiscs() -> Vec<TcMessage> {
     };
     let nlas = vec![
         tc::nlas::Nla::Kind("htb".to_string()),
-        tc::nlas::Nla::Options({
-            let mut opts = Vec::with_capacity(2);
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
+        tc::nlas::Nla::Options(vec![
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(
                 2,
                 vec![
                     17, 0, 3, 0, // rate
@@ -201,13 +174,9 @@ pub fn nl_qdiscs() -> Vec<TcMessage> {
                     0, 0, 0, 0, // cbuffer
                     0, 0, 0, 0, // quantum
                 ],
-            )));
-            opts.push(tc::nlas::TcOpt::Other(nla::DefaultNla::new(
-                5,
-                vec![232, 3, 0, 0],
-            )));
-            opts
-        }),
+            )),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(5, vec![232, 3, 0, 0])),
+        ]),
         tc::nlas::Nla::HwOffload(0),
         tc::nlas::Nla::Stats2(vec![
             tc::nlas::Stats2::StatsBasic(vec![
@@ -350,193 +319,3 @@ pub fn get_links() -> Vec<NetlinkMessage<RtnlMessage>> {
         })
         .collect()
 }
-
-/*
-pub fn qdiscs() -> Vec<TcMsg> {
-    let mut qdiscs = Vec::with_capacity(4);
-
-    // noqueue
-    qdiscs.push(TcMsg {
-        header: TcHeader {
-            index: 1,
-            handle: 0,
-            parent: 4294967295,
-        },
-        attrs: vec![
-            TcAttr::Kind("noqueue".to_string()),
-            TcAttr::Stats(vec![0u8; 36]),
-            TcAttr::Stats2(vec![
-                TcStats2::StatsBasic(vec![0u8; 16]),
-                TcStats2::StatsQueue(vec![0u8; 20]),
-            ]),
-            TcAttr::HwOffload(0),
-        ],
-    });
-
-    // mq
-    qdiscs.push(TcMessage {
-        header: TcHeader {
-            index: 2,
-            handle: 0,
-            parent: 4294967295,
-        },
-        attrs: vec![
-            TcAttr::Kind("mq".to_string()),
-            TcAttr::Stats(vec![
-                28, 146, 82, 7, 0, 0, 0, 0, 119, 55, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            ]),
-            TcAttr::Stats2(vec![
-                TcStats2::StatsBasic(vec![28, 146, 82, 7, 0, 0, 0, 0, 119, 55, 6, 0, 0, 0, 0, 0]),
-                TcStats2::StatsQueue(vec![
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0,
-                ]),
-            ]),
-            TcAttr::HwOffload(0),
-        ],
-    });
-
-    // fq_codel
-    qdiscs.push(TcMessage {
-        header: TcHeader {
-            index: 2,
-            handle: 0,
-            parent: 2,
-        },
-        attrs: vec![
-            TcAttr::Kind("fq_codel".to_string()),
-            TcAttr::Options(vec![
-                TcOption {
-                    kind: 1,
-                    bytes: vec![135, 19, 0, 0],
-                },
-                TcOption {
-                    kind: 2,
-                    bytes: vec![0, 40, 0, 0],
-                },
-                TcOption {
-                    kind: 3,
-                    bytes: vec![159, 134, 1, 0],
-                },
-                TcOption {
-                    kind: 4,
-                    bytes: vec![1, 0, 0, 0],
-                },
-                TcOption {
-                    kind: 6,
-                    bytes: vec![234, 5, 0, 0],
-                },
-                TcOption {
-                    kind: 8,
-                    bytes: vec![64, 0, 0, 0],
-                },
-                TcOption {
-                    kind: 9,
-                    bytes: vec![0, 0, 0, 2],
-                },
-                TcOption {
-                    kind: 5,
-                    bytes: vec![0, 4, 0, 0],
-                },
-            ]),
-            TcAttr::Stats(vec![
-                76, 222, 96, 2, 0, 0, 0, 0, 55, 135, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            ]),
-            TcAttr::Stats2(vec![
-                TcStats2::StatsBasic(vec![76, 222, 96, 2, 0, 0, 0, 0, 55, 135, 2, 0, 0, 0, 0, 0]),
-                TcStats2::StatsQueue(vec![
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0,
-                ]),
-                TcStats2::StatsApp(vec![
-                    0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                ]),
-            ]),
-            TcAttr::Xstats(vec![
-                0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            ]),
-            TcAttr::HwOffload(0),
-        ],
-    });
-
-    // htb
-    qdiscs.push(TcMessage {
-        header: TcHeader {
-            index: 3,
-            handle: 65536,
-            parent: 4294967295,
-        },
-        attrs: vec![
-            TcAttr::Kind("htb".to_string()),
-            TcAttr::Options(vec![
-                TcOption {
-                    kind: 2,
-                    bytes: vec![
-                        17, 0, 3, 0, 10, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    ],
-                },
-                TcOption {
-                    kind: 5,
-                    bytes: vec![232, 3, 0, 0],
-                },
-            ]),
-            TcAttr::Stats(vec![0u8; 36]),
-            TcAttr::Stats2(vec![
-                TcStats2::StatsBasic(vec![0u8; 16]),
-                TcStats2::StatsQueue(vec![0u8; 20]),
-            ]),
-            TcAttr::HwOffload(0),
-        ],
-    });
-
-    qdiscs
-}
-
-pub fn classes() -> Vec<TcMessage> {
-    let mut classes = Vec::with_capacity(1);
-
-    classes.push(TcMessage {
-        header: TcHeader {
-            index: 3,
-            handle: 65537,
-            parent: 4294967295,
-        },
-        attrs: vec![
-            TcAttr::Kind("htb".to_string()),
-            TcAttr::Options(vec![TcOption {
-                kind: 1,
-                bytes: vec![
-                    0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 72, 232, 1, 0,
-                    64, 13, 3, 0, 64, 13, 3, 0, 212, 48, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0,
-                ],
-            }]),
-            TcAttr::Stats(vec![0u8; 36]),
-            TcAttr::Stats2(vec![
-                TcStats2::StatsBasic(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-                TcStats2::StatsQueue(vec![
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                ]),
-                TcStats2::StatsApp(vec![
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13, 3, 0,
-                ]),
-            ]),
-            TcAttr::Xstats(vec![
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 13, 3, 0, 64, 13, 3, 0,
-            ]),
-        ],
-    });
-
-    classes
-}
-
-pub fn links() -> Vec<LinkMsg> {
-    vec![LinkMsg {
-        header: LinkHeader { index: 3 },
-        attr: LinkAttr {
-            name: "eth0".to_string(),
-        },
-    }]
-}
- */
