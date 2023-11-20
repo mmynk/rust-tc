@@ -137,31 +137,6 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
                 let mut options = Vec::new();
                 for opt in tc_opts {
                     match opt {
-                        netlink_tc::TcOpt::Ingress => {
-                            let option = TcOption {
-                                kind: 0u16, // TODO: what is Ingress kind?
-                                bytes: vec![],
-                            };
-                            options.push(option);
-                        }
-                        netlink_tc::TcOpt::U32(nla) => {
-                            let mut buf = vec![0u8; nla.value_len()];
-                            nla.emit_value(buf.as_mut_slice());
-                            let option = TcOption {
-                                kind: nla.kind(),
-                                bytes: buf,
-                            };
-                            options.push(option);
-                        }
-                        netlink_tc::TcOpt::Matchall(nla) => {
-                            let mut buf = vec![0u8; nla.value_len()];
-                            nla.emit_value(buf.as_mut_slice());
-                            let option = TcOption {
-                                kind: nla.kind(),
-                                bytes: buf,
-                            };
-                            options.push(option);
-                        }
                         netlink_tc::TcOpt::Other(nla) => {
                             let mut buf = vec![0u8; nla.value_len()];
                             nla.emit_value(buf.as_mut_slice());
