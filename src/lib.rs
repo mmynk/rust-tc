@@ -21,18 +21,15 @@
 //! // Get list of links
 //! let links = tc::links(messages.clone()).unwrap();
 //! ```
-
-pub use class::*;
-pub use errors::*;
-pub use qdiscs::*;
-pub use types::*;
-
 use netlink_packet_core::{NetlinkMessage, NetlinkPayload};
 use netlink_packet_route::{
-    link as netlink_link, tc as netlink_tc, LinkMessage as NlLinkMessage, RtnlMessage,
-    TcMessage as NlTcMessage,
+    link as netlink_link, tc as netlink_tc,
+    LinkMessage as NlLinkMessage, RtnlMessage, TcMessage as NlTcMessage,
 };
 use netlink_packet_utils::{nla::Nla, Emitable};
+
+use errors::{LinkError, TcError};
+use types::{Link, LinkAttr, LinkHeader, LinkMsg, Tc, TcAttr, TcHeader, TcMsg, TcOption, TcStats2};
 
 pub mod errors;
 pub mod types;
@@ -51,16 +48,15 @@ mod tests;
 /// Possible message types for `tc` messages.
 /// A subset of `rtnl::RtnlMessage` enum.
 pub enum RtNetlinkMessage {
-    GetQdisc(TcMsg),  // RTM_GETQDISC
-    GetClass(TcMsg),  // RTM_GETCLASS
+    GetQdisc(TcMsg), // RTM_GETQDISC
+    GetClass(TcMsg), // RTM_GETCLASS
     GetLink(LinkMsg), // RTM_GETLINK
 }
 
 fn to_tc(tc_message: NlTcMessage) -> TcMsg {
     let NlTcMessage {
         header: tc_header,
-        nlas,
-        ..
+        nlas, ..
     } = tc_message;
     let header = TcHeader {
         index: tc_header.index,
@@ -176,7 +172,7 @@ fn to_link(link_message: NlLinkMessage) -> LinkMsg {
 
 fn parse(
     messages: Vec<NetlinkMessage<RtnlMessage>>,
-) -> Result<Vec<RtNetlinkMessage>, NetlinkError> {
+) -> Vec<RtNetlinkMessage> {
     let mut tc_messages = Vec::new();
     for message in messages {
         match message.payload {
@@ -192,17 +188,17 @@ fn parse(
             _ => (),
         }
     }
-    Ok(tc_messages)
+    tc_messages
 }
 
 /// Parse `tc` queueing disciplines and classes for the corresponding Netlink messages.
 pub fn tc_stats(messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Tc>, TcError> {
-    let messages = parse(messages).map_err(TcError::Netlink)?;
+    let messages = parse(messages);
     tc::tc_stats(messages)
 }
 
 /// Parse `link` messages for the corresponding Netlink messages
 pub fn links(messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Link>, LinkError> {
-    let messages = parse(messages).map_err(LinkError::Netlink)?;
+    let messages = parse(messages);
     link::links(messages)
 }

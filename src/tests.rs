@@ -1,6 +1,9 @@
+use crate::class::{Htb, HtbGlob, HtbOpt, HtbXstats};
+use crate::qdiscs::{FqCodel, FqCodelXStats};
 use super::*;
 
 use crate::test_data::{get_classes, get_links, get_qdiscs};
+use crate::types::{Class, QDisc, RateSpec, XStats};
 
 #[test]
 fn test_no_queue() {

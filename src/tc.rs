@@ -1,14 +1,9 @@
-use crate::{
-    class::htb::Htb,
-    constants::*,
-    errors::TcError,
-    qdiscs::{
-        clsact::Clsact,
-        fq_codel::{FqCodel, FqCodelXStats},
-    },
-    types::*,
-    HtbXstats, RtNetlinkMessage,
-};
+use crate::class::{Htb, HtbXstats};
+use crate::constants::{CLSACT, FQ_CODEL, HTB};
+use crate::errors::TcError;
+use crate::qdiscs::{Clsact, FqCodel, FqCodelXStats};
+use crate::RtNetlinkMessage;
+use crate::types::{Attribute, Class, QDisc, Stats, Stats2, Tc, TcAttr, TcMessage, TcMsg, TcOption, TcStats2, XStats};
 
 /// `qdiscs` returns a list of queuing disciplines by parsing the passed `TcMsg` vector.
 pub fn qdiscs(message: TcMsg) -> Result<Tc, TcError> {
@@ -103,6 +98,7 @@ fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
                 Ok(stats_queue) => stats.queue = Some(stats_queue),
                 Err(e) => errors.push(format!("Failed to parse StatsQueue: {e}")),
             },
+            // TODO: StatsApp parsing
             // TcStats2::StatsApp(bytes) => stats.app = bincode::deserialize(bytes.as_slice()).ok(),
             _ => (),
         }
@@ -110,7 +106,7 @@ fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
 
     if !errors.is_empty() {
         let message = errors.join(", ");
-        Err(TcError::UnmarshalStructs(message))
+        Err(TcError::Parse(format!("Failed to unmarshal structs: {message}")))
     } else {
         Ok(stats)
     }
