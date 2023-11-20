@@ -21,4 +21,7 @@ pub enum Error {
 
     #[error("Attribute not implemented: {0}")]
     UnimplementedAttribute(String),
+
+    #[error("Unknown netlink message type: {0}")]
+    UnknownNetlinkMessage(u16),
 }

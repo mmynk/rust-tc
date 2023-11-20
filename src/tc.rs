@@ -2,11 +2,11 @@ use crate::class::{Htb, HtbXstats};
 use crate::constants::{CLSACT, FQ_CODEL, HTB};
 use crate::errors::Error;
 use crate::qdiscs::{Clsact, FqCodel, FqCodelXStats};
-use crate::RtNetlinkMessage;
+use crate::{OpenOptions, RtNetlinkMessage};
 use crate::types::{Attribute, Class, QDisc, Stats, Stats2, Tc, TcAttr, TcMessage, TcMsg, TcOption, TcStats2, XStats};
 
 /// `qdiscs` returns a list of queuing disciplines by parsing the passed `TcMsg` vector.
-pub fn qdiscs(message: TcMsg) -> Result<Tc, Error> {
+pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
     let tc = TcMessage {
         index: message.header.index as u32,
         handle: message.header.handle,
@@ -14,21 +14,27 @@ pub fn qdiscs(message: TcMsg) -> Result<Tc, Error> {
     };
     let mut attribute = Attribute::default();
 
-    let mut options = Vec::new();
+    let mut tc_opts = Vec::new();
     let mut xstats = Vec::new();
     for attr in &message.attrs {
         match attr {
             TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
-            TcAttr::Options(opts) => options = opts.to_vec(),
+            TcAttr::Options(options) => tc_opts = options.to_vec(),
             TcAttr::Stats(bytes) => attribute.stats = parse_stats(bytes).ok(),
             TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
             TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
-            _ => (),
+            _ => {
+                if opts.fail_on_unknown_attribute {
+                    return Err(Error::UnimplementedAttribute(format!(
+                        "Attribute {:?} not implemented", attr
+                    )))
+                }
+            },
         }
     }
 
-    attribute.qdisc = parse_qdiscs(attribute.kind.as_str(), options);
-    attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
+    attribute.qdisc = parse_qdiscs(attribute.kind.as_str(), tc_opts, opts)?;
+    attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice(), opts)?;
 
     Ok(Tc {
         msg: tc,
@@ -37,7 +43,7 @@ pub fn qdiscs(message: TcMsg) -> Result<Tc, Error> {
 }
 
 /// `classes` returns a list of traffic control classes by parsing the passed `TcMsg` vector.
-pub fn classes(message: TcMsg) -> Result<Tc, Error> {
+pub fn classes(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
     let tc = TcMessage {
         index: message.header.index as u32,
         handle: message.header.handle,
@@ -45,21 +51,28 @@ pub fn classes(message: TcMsg) -> Result<Tc, Error> {
     };
     let mut attribute = Attribute::default();
 
-    let mut opts = vec![];
+    let mut tc_opts = vec![];
     let mut xstats = Vec::new();
     for attr in &message.attrs {
         match attr {
             TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
-            TcAttr::Options(tc_opts) => opts = tc_opts.to_vec(),
+            TcAttr::Options(options) => tc_opts = options.to_vec(),
             TcAttr::Stats(bytes) => attribute.stats = parse_stats(bytes).ok(),
             TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
             TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
-            _ => (),
+            _ => {
+                if opts.fail_on_unknown_attribute {
+                    return Err(Error::UnimplementedAttribute(format!(
+                        "Attribute {:?} not implemented",
+                        attr
+                    )));
+                }
+            }
         }
     }
 
-    attribute.class = parse_classes(attribute.kind.as_str(), opts);
-    attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice()).ok();
+    attribute.class = parse_classes(attribute.kind.as_str(), tc_opts, opts)?;
+    attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice(), opts)?;
 
     Ok(Tc {
         msg: tc,
@@ -67,13 +80,13 @@ pub fn classes(message: TcMsg) -> Result<Tc, Error> {
     })
 }
 
-pub fn tc_stats(messages: Vec<RtNetlinkMessage>) -> Result<Vec<Tc>, Error> {
+pub fn tc_stats(messages: Vec<RtNetlinkMessage>, opts: &OpenOptions) -> Result<Vec<Tc>, Error> {
     let mut tcs = Vec::with_capacity(messages.len());
 
     for message in messages {
         match message {
-            RtNetlinkMessage::GetQdisc(message) => tcs.push(qdiscs(message)?),
-            RtNetlinkMessage::GetClass(message) => tcs.push(classes(message)?),
+            RtNetlinkMessage::GetQdisc(message) => tcs.push(qdiscs(message, opts)?),
+            RtNetlinkMessage::GetClass(message) => tcs.push(classes(message, opts)?),
             _ => {}
         }
     }
@@ -112,28 +125,53 @@ fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, Error> {
     }
 }
 
-fn parse_qdiscs(kind: &str, opts: Vec<TcOption>) -> Option<QDisc> {
-    match kind {
-        FQ_CODEL => Some(QDisc::FqCodel(FqCodel::new(opts))),
+fn parse_qdiscs(kind: &str, tc_opts: Vec<TcOption>, opts: &OpenOptions) -> Result<Option<QDisc>, Error> {
+    let qdisc = match kind {
+        FQ_CODEL => Some(QDisc::FqCodel(FqCodel::new(tc_opts))),
         CLSACT => Some(QDisc::Clsact(Clsact {})),
-        HTB => Htb::new(opts).init.map(QDisc::Htb),
-        _ => None,
-    }
+        HTB => Htb::new(tc_opts).init.map(QDisc::Htb),
+        _ => {
+            if opts.fail_on_unknown_option {
+                return Err(Error::UnimplementedAttribute(format!(
+                    "QDisc {kind} not implemented",
+                )))
+            } else {
+                None
+            }
+        },
+    };
+    Ok(qdisc)
 }
 
-fn parse_classes(kind: &str, opts: Vec<TcOption>) -> Option<Class> {
-    match kind {
-        HTB => Some(Class::Htb(Htb::new(opts))),
-        _ => None,
-    }
+fn parse_classes(kind: &str, tc_opts: Vec<TcOption>, opts: &OpenOptions) -> Result<Option<Class>, Error> {
+    let class = match kind {
+        HTB => Some(Class::Htb(Htb::new(tc_opts))),
+        _ => {
+            if opts.fail_on_unknown_option {
+                return Err(Error::UnimplementedAttribute(format!(
+                    "Class {kind} not implemented",
+                )))
+            } else {
+                None
+            }
+        },
+    };
+    Ok(class)
 }
 
-fn parse_xstats(kind: &str, bytes: &[u8]) -> Result<XStats, Error> {
-    match kind {
-        FQ_CODEL => FqCodelXStats::new(bytes).map(XStats::FqCodel),
-        HTB => HtbXstats::new(bytes).map(XStats::Htb),
-        _ => Err(Error::UnimplementedAttribute(format!(
-            "XStats for {kind}"
-        ))),
-    }
+fn parse_xstats(kind: &str, bytes: &[u8], opts: &OpenOptions) -> Result<Option<XStats>, Error> {
+    let xstats = match kind {
+        FQ_CODEL => FqCodelXStats::new(bytes).ok().map(XStats::FqCodel),
+        HTB => HtbXstats::new(bytes).ok().map(XStats::Htb),
+        _ => {
+            if opts.fail_on_unknown_option {
+                return Err(Error::UnimplementedAttribute(format!(
+                    "XStats {kind} not implemented",
+                )))
+            } else {
+                None
+            }
+        },
+    };
+    Ok(xstats)
 }

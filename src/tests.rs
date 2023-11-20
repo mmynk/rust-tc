@@ -8,7 +8,9 @@ use crate::types::{Class, QDisc, RateSpec, XStats};
 #[test]
 fn test_no_queue() {
     let messages = vec![get_qdiscs()[0].clone()];
-    let stats = tc_stats(messages).unwrap();
+    let stats = OpenOptions::new()
+        .tc(messages)
+        .unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -30,7 +32,9 @@ fn test_no_queue() {
 #[test]
 fn test_mq() {
     let messages = vec![get_qdiscs()[1].clone()];
-    let stats = tc_stats(messages).unwrap();
+    let stats = OpenOptions::new()
+        .tc(messages)
+        .unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -53,7 +57,9 @@ fn test_mq() {
 #[test]
 fn test_fq_codel() {
     let messages = vec![get_qdiscs()[2].clone()];
-    let stats = tc_stats(messages).unwrap();
+    let stats = OpenOptions::new()
+        .tc(messages)
+        .unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -111,7 +117,9 @@ fn test_htb() {
     let qdiscs = get_qdiscs();
     let classes = get_classes();
     let messages = vec![qdiscs[3].clone(), classes[0].clone()];
-    let tc_stats = tc_stats(messages).unwrap();
+    let tc_stats = OpenOptions::new()
+        .tc(messages)
+        .unwrap();
 
     let tc = tc_stats.get(0).unwrap();
     // message
@@ -199,7 +207,9 @@ fn test_htb() {
 
 #[test]
 fn test_links() {
-    let links = links(get_links()).unwrap();
+    let links = OpenOptions::new()
+        .links(get_links())
+        .unwrap();
 
     assert_eq!(links[0].index, 1);
     assert_eq!(links[0].name, "eth0");

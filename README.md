@@ -17,10 +17,13 @@ fn main() {
     let messages: Vec<NetlinkMessage<RtnlMessage>> = vec![]; // init with netlink messages
 
     // Get list of tc qdiscs or classes
-    let qdiscs = tc::tc_stats(messages.clone()).unwrap();
+    let qdiscs = OpenOptions::new()
+        .fail_on_unknown_netlink_message(true)
+        .tc(messages.clone()).unwrap();
 
     // Get list of links
-    let links = tc::links(messages.clone()).unwrap();
+    let links = OpenOptions::new()
+        .links(messages.clone()).unwrap();
 }
 ```
 
