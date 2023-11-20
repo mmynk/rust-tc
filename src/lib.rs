@@ -147,7 +147,7 @@ fn to_tc(tc_message: NlTcMessage) -> TcMsg {
     TcMsg { header, attrs }
 }
 
-fn to_link(link_message: NlLinkMessage) -> LinkMsg {
+fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, LinkError> {
     let NlLinkMessage {
         header: link_header,
         nlas,
@@ -157,16 +157,19 @@ fn to_link(link_message: NlLinkMessage) -> LinkMsg {
         index: link_header.index,
     };
 
-    let mut name = String::new();
+    let mut name = None;
     for nla in nlas {
         if let netlink_link::nlas::Nla::IfName(if_name) = nla {
-            name = if_name;
+            name = Some(if_name);
+            break;
         }
     }
 
-    LinkMsg {
-        header,
-        attr: LinkAttr { name },
+    if let Some(if_name) = name {
+        let attr = LinkAttr { name: if_name };
+        Ok(LinkMsg { header, attr })
+    } else {
+        Err(Error::MissingAttribute("Attribute IFLA_IFNAME not found".to_string()))
     }
 }
 
