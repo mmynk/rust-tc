@@ -1,16 +1,14 @@
 use bincode::ErrorKind;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
-pub enum LinkError {
-    #[error("Missing attribute: {0}")]
-    MissingAttribute(String),
-}
 
 #[derive(Debug, Error)]
-pub enum TcError {
+pub enum Error {
     #[error("Failed to retrieve links: {0}")]
-    Link(#[from] LinkError),
+    Link(String),
+
+    #[error("Missing attribute: {0}")]
+    MissingAttribute(String),
 
     #[error("Failed to parse: {0}")]
     Parse(String),

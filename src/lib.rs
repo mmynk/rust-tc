@@ -28,7 +28,7 @@ use netlink_packet_route::{
 };
 use netlink_packet_utils::{nla::Nla, Emitable};
 
-use errors::{LinkError, TcError};
+use errors::Error;
 use types::{Link, LinkAttr, LinkHeader, LinkMsg, Tc, TcAttr, TcHeader, TcMsg, TcOption, TcStats2};
 
 pub mod errors;
@@ -53,7 +53,7 @@ pub enum RtNetlinkMessage {
     GetLink(LinkMsg), // RTM_GETLINK
 }
 
-fn to_tc(tc_message: NlTcMessage) -> TcMsg {
+fn to_tc(tc_message: NlTcMessage) -> Result<TcMsg, Error> {
     let NlTcMessage {
         header: tc_header,
         nlas, ..
@@ -144,10 +144,10 @@ fn to_tc(tc_message: NlTcMessage) -> TcMsg {
         }
     }
 
-    TcMsg { header, attrs }
+    Ok(TcMsg { header, attrs })
 }
 
-fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, LinkError> {
+fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, Error> {
     let NlLinkMessage {
         header: link_header,
         nlas,
@@ -175,33 +175,33 @@ fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, LinkError> {
 
 fn parse(
     messages: Vec<NetlinkMessage<RtnlMessage>>,
-) -> Vec<RtNetlinkMessage> {
+) -> Result<Vec<RtNetlinkMessage>, Error> {
     let mut tc_messages = Vec::new();
     for message in messages {
         match message.payload {
             NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(message)) => {
-                tc_messages.push(RtNetlinkMessage::GetQdisc(to_tc(message.clone())))
+                tc_messages.push(RtNetlinkMessage::GetQdisc(to_tc(message.clone())?))
             }
             NetlinkPayload::InnerMessage(RtnlMessage::NewTrafficClass(message)) => {
-                tc_messages.push(RtNetlinkMessage::GetClass(to_tc(message.clone())))
+                tc_messages.push(RtNetlinkMessage::GetClass(to_tc(message.clone())?))
             }
             NetlinkPayload::InnerMessage(RtnlMessage::NewLink(message)) => {
-                tc_messages.push(RtNetlinkMessage::GetLink(to_link(message.clone())))
+                tc_messages.push(RtNetlinkMessage::GetLink(to_link(message.clone())?))
             }
             _ => (),
         }
     }
-    tc_messages
+    Ok(tc_messages)
 }
 
 /// Parse `tc` queueing disciplines and classes for the corresponding Netlink messages.
-pub fn tc_stats(messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Tc>, TcError> {
-    let messages = parse(messages);
+pub fn tc_stats(messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Tc>, Error> {
+    let messages = parse(messages)?;
     tc::tc_stats(messages)
 }
 
 /// Parse `link` messages for the corresponding Netlink messages
-pub fn links(messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Link>, LinkError> {
-    let messages = parse(messages);
+pub fn links(messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Link>, Error> {
+    let messages = parse(messages)?;
     link::links(messages)
 }

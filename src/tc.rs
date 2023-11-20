@@ -1,12 +1,12 @@
 use crate::class::{Htb, HtbXstats};
 use crate::constants::{CLSACT, FQ_CODEL, HTB};
-use crate::errors::TcError;
+use crate::errors::Error;
 use crate::qdiscs::{Clsact, FqCodel, FqCodelXStats};
 use crate::RtNetlinkMessage;
 use crate::types::{Attribute, Class, QDisc, Stats, Stats2, Tc, TcAttr, TcMessage, TcMsg, TcOption, TcStats2, XStats};
 
 /// `qdiscs` returns a list of queuing disciplines by parsing the passed `TcMsg` vector.
-pub fn qdiscs(message: TcMsg) -> Result<Tc, TcError> {
+pub fn qdiscs(message: TcMsg) -> Result<Tc, Error> {
     let tc = TcMessage {
         index: message.header.index as u32,
         handle: message.header.handle,
@@ -37,7 +37,7 @@ pub fn qdiscs(message: TcMsg) -> Result<Tc, TcError> {
 }
 
 /// `classes` returns a list of traffic control classes by parsing the passed `TcMsg` vector.
-pub fn classes(message: TcMsg) -> Result<Tc, TcError> {
+pub fn classes(message: TcMsg) -> Result<Tc, Error> {
     let tc = TcMessage {
         index: message.header.index as u32,
         handle: message.header.handle,
@@ -67,7 +67,7 @@ pub fn classes(message: TcMsg) -> Result<Tc, TcError> {
     })
 }
 
-pub fn tc_stats(messages: Vec<RtNetlinkMessage>) -> Result<Vec<Tc>, TcError> {
+pub fn tc_stats(messages: Vec<RtNetlinkMessage>) -> Result<Vec<Tc>, Error> {
     let mut tcs = Vec::with_capacity(messages.len());
 
     for message in messages {
@@ -81,11 +81,11 @@ pub fn tc_stats(messages: Vec<RtNetlinkMessage>) -> Result<Vec<Tc>, TcError> {
     Ok(tcs)
 }
 
-fn parse_stats(bytes: &[u8]) -> Result<Stats, TcError> {
-    bincode::deserialize(bytes).map_err(TcError::UnmarshalStruct)
+fn parse_stats(bytes: &[u8]) -> Result<Stats, Error> {
+    bincode::deserialize(bytes).map_err(Error::UnmarshalStruct)
 }
 
-fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
+fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, Error> {
     let mut stats = Stats2::default();
     let mut errors = Vec::new();
     for stat in stats2 {
@@ -106,7 +106,7 @@ fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
 
     if !errors.is_empty() {
         let message = errors.join(", ");
-        Err(TcError::Parse(format!("Failed to unmarshal structs: {message}")))
+        Err(Error::Parse(format!("Failed to unmarshal structs: {message}")))
     } else {
         Ok(stats)
     }
@@ -128,11 +128,11 @@ fn parse_classes(kind: &str, opts: Vec<TcOption>) -> Option<Class> {
     }
 }
 
-fn parse_xstats(kind: &str, bytes: &[u8]) -> Result<XStats, TcError> {
+fn parse_xstats(kind: &str, bytes: &[u8]) -> Result<XStats, Error> {
     match kind {
         FQ_CODEL => FqCodelXStats::new(bytes).map(XStats::FqCodel),
         HTB => HtbXstats::new(bytes).map(XStats::Htb),
-        _ => Err(TcError::UnimplementedAttribute(format!(
+        _ => Err(Error::UnimplementedAttribute(format!(
             "XStats for {kind}"
         ))),
     }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::TcError};
+use crate::{errors::Error};
 use crate::class::{Htb, HtbGlob, HtbXstats};
 use crate::qdiscs::{Clsact, FqCodel, FqCodelXStats};
 
@@ -152,8 +152,8 @@ pub struct RateSpec {
     pub rate: u32,
 }
 
-pub fn unmarshal_rate_spec(buf: &[u8]) -> Result<RateSpec, TcError> {
-    bincode::deserialize(buf).map_err(TcError::UnmarshalStruct)
+pub fn unmarshal_rate_spec(buf: &[u8]) -> Result<RateSpec, Error> {
+    bincode::deserialize(buf).map_err(Error::UnmarshalStruct)
 }
 
 /// A subset of structs defined in `include/uapi/linux/if_link.h`.

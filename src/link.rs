@@ -1,7 +1,7 @@
-use crate::{errors::LinkError, Link, LinkMsg, RtNetlinkMessage};
+use crate::{errors::Error, Link, LinkMsg, RtNetlinkMessage};
 
 /// `links` parses intermediate representation of netlink link messages `LinkMsg`s into `Link`s.
-pub fn links(messages: Vec<RtNetlinkMessage>) -> Result<Vec<Link>, LinkError> {
+pub fn links(messages: Vec<RtNetlinkMessage>) -> Result<Vec<Link>, Error> {
     let messages = messages
         .into_iter()
         .filter_map(|message| match message {
