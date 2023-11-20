@@ -4,9 +4,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Failed to retrieve links: {0}")]
-    Link(String),
-
     #[error("Missing attribute: {0}")]
     MissingAttribute(String),
 
