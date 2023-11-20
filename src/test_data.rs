@@ -382,8 +382,8 @@ pub fn unknown_qdisc() -> NetlinkMessage<RtnlMessage> {
 
     NetlinkMessage::new(
         NetlinkHeader::default(),
-        NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(
-            TcMessage::from_parts(header, nlas),
-        )),
+        NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(TcMessage::from_parts(
+            header, nlas,
+        ))),
     )
 }

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::Error};
 use crate::class::{Htb, HtbGlob, HtbXstats};
+use crate::errors::Error;
 use crate::qdiscs::{Clsact, FqCodel, FqCodelXStats};
 
 /// This struct is an intermediate representation for netlink `tc` messages.

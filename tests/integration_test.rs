@@ -7,15 +7,11 @@ use netlink_tc::OpenOptions;
 
 fn socket() -> Socket {
     let socket = Socket::new(NETLINK_ROUTE).unwrap();
-    socket
-        .connect(&SocketAddr::new(0, 0))
-        .unwrap();
+    socket.connect(&SocketAddr::new(0, 0)).unwrap();
     socket
 }
 
-fn receive_netlink_messages(
-    message: RtnlMessage,
-) -> Vec<NetlinkMessage<RtnlMessage>> {
+fn receive_netlink_messages(message: RtnlMessage) -> Vec<NetlinkMessage<RtnlMessage>> {
     let socket = socket();
     send_request(&socket, message);
 
@@ -81,9 +77,7 @@ fn send_request(socket: &Socket, message: RtnlMessage) {
 #[test]
 fn test_qdiscs() {
     let messages = get_qdiscs();
-    let tcs = OpenOptions::new()
-        .tc(messages)
-        .unwrap();
+    let tcs = OpenOptions::new().tc(messages).unwrap();
     for tc in tcs {
         let attr = tc.attr;
         assert!(!attr.kind.is_empty());
@@ -95,9 +89,7 @@ fn test_qdiscs() {
 #[test]
 fn test_link_classes() {
     let messages = get_links();
-    let links = OpenOptions::new()
-        .links(messages)
-        .unwrap();
+    let links = OpenOptions::new().links(messages).unwrap();
 
     assert!(!links.is_empty());
 

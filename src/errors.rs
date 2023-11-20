@@ -1,7 +1,6 @@
 use bincode::ErrorKind;
 use thiserror::Error;
 
-
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Missing attribute: {0}")]

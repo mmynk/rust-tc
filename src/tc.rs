@@ -2,8 +2,11 @@ use crate::class::{Htb, HtbXstats};
 use crate::constants::{CLSACT, FQ_CODEL, HTB};
 use crate::errors::Error;
 use crate::qdiscs::{Clsact, FqCodel, FqCodelXStats};
+use crate::types::{
+    Attribute, Class, QDisc, Stats, Stats2, Tc, TcAttr, TcMessage, TcMsg, TcOption, TcStats2,
+    XStats,
+};
 use crate::{OpenOptions, RtNetlinkMessage};
-use crate::types::{Attribute, Class, QDisc, Stats, Stats2, Tc, TcAttr, TcMessage, TcMsg, TcOption, TcStats2, XStats};
 
 /// `qdiscs` returns a list of queuing disciplines by parsing the passed `TcMsg` vector.
 pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
@@ -26,10 +29,11 @@ pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
             _ => {
                 if opts.fail_on_unknown_attribute {
                     return Err(Error::UnimplementedAttribute(format!(
-                        "Attribute {:?} not implemented", attr
-                    )))
+                        "Attribute {:?} not implemented",
+                        attr
+                    )));
                 }
-            },
+            }
         }
     }
 
@@ -119,13 +123,19 @@ fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, Error> {
 
     if !errors.is_empty() {
         let message = errors.join(", ");
-        Err(Error::Parse(format!("Failed to unmarshal structs: {message}")))
+        Err(Error::Parse(format!(
+            "Failed to unmarshal structs: {message}"
+        )))
     } else {
         Ok(stats)
     }
 }
 
-fn parse_qdiscs(kind: &str, tc_opts: Vec<TcOption>, opts: &OpenOptions) -> Result<Option<QDisc>, Error> {
+fn parse_qdiscs(
+    kind: &str,
+    tc_opts: Vec<TcOption>,
+    opts: &OpenOptions,
+) -> Result<Option<QDisc>, Error> {
     let qdisc = match kind {
         FQ_CODEL => Some(QDisc::FqCodel(FqCodel::new(tc_opts))),
         CLSACT => Some(QDisc::Clsact(Clsact {})),
@@ -134,27 +144,31 @@ fn parse_qdiscs(kind: &str, tc_opts: Vec<TcOption>, opts: &OpenOptions) -> Resul
             if opts.fail_on_unknown_option {
                 return Err(Error::UnimplementedAttribute(format!(
                     "QDisc {kind} not implemented",
-                )))
+                )));
             } else {
                 None
             }
-        },
+        }
     };
     Ok(qdisc)
 }
 
-fn parse_classes(kind: &str, tc_opts: Vec<TcOption>, opts: &OpenOptions) -> Result<Option<Class>, Error> {
+fn parse_classes(
+    kind: &str,
+    tc_opts: Vec<TcOption>,
+    opts: &OpenOptions,
+) -> Result<Option<Class>, Error> {
     let class = match kind {
         HTB => Some(Class::Htb(Htb::new(tc_opts))),
         _ => {
             if opts.fail_on_unknown_option {
                 return Err(Error::UnimplementedAttribute(format!(
                     "Class {kind} not implemented",
-                )))
+                )));
             } else {
                 None
             }
-        },
+        }
     };
     Ok(class)
 }
@@ -167,11 +181,11 @@ fn parse_xstats(kind: &str, bytes: &[u8], opts: &OpenOptions) -> Result<Option<X
             if opts.fail_on_unknown_option {
                 return Err(Error::UnimplementedAttribute(format!(
                     "XStats {kind} not implemented",
-                )))
+                )));
             } else {
                 None
             }
-        },
+        }
     };
     Ok(xstats)
 }

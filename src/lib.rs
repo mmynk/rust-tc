@@ -26,8 +26,8 @@
 //! ```
 use netlink_packet_core::{NetlinkMessage, NetlinkPayload};
 use netlink_packet_route::{
-    link as netlink_link, tc as netlink_tc,
-    LinkMessage as NlLinkMessage, RtnlMessage, TcMessage as NlTcMessage,
+    link as netlink_link, tc as netlink_tc, LinkMessage as NlLinkMessage, RtnlMessage,
+    TcMessage as NlTcMessage,
 };
 use netlink_packet_utils::{nla::Nla, Emitable};
 
@@ -51,9 +51,9 @@ mod tests;
 /// Possible message types for `tc` messages.
 /// A subset of `rtnl::RtnlMessage` enum.
 pub enum RtNetlinkMessage {
-    GetQdisc(TcMsg),    /* RTM_GETQDISC */
-    GetClass(TcMsg),    /* RTM_GETCLASS */
-    GetLink(LinkMsg),   /* RTM_GETLINK */
+    GetQdisc(TcMsg),  /* RTM_GETQDISC */
+    GetClass(TcMsg),  /* RTM_GETCLASS */
+    GetLink(LinkMsg), /* RTM_GETLINK */
 }
 
 /// `OpenOptions` provides options for controlling how `netlink-tc` parses netlink messages.
@@ -120,7 +120,8 @@ impl OpenOptions {
 fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
     let NlTcMessage {
         header: tc_header,
-        nlas, ..
+        nlas,
+        ..
     } = tc_message;
     let header = TcHeader {
         index: tc_header.index,
@@ -177,7 +178,7 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
                                     opt
                                 )));
                             }
-                        },
+                        }
                     };
                 }
                 attrs.push(TcAttr::Options(options));
@@ -207,7 +208,7 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
                                     stat
                                 )));
                             }
-                        },
+                        }
                     }
                 }
                 attrs.push(TcAttr::Stats2(stats2));
@@ -254,7 +255,9 @@ fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, Error> {
         let attr = LinkAttr { name: if_name };
         Ok(LinkMsg { header, attr })
     } else {
-        Err(Error::MissingAttribute("Attribute IFLA_IFNAME not found".to_string()))
+        Err(Error::MissingAttribute(
+            "Attribute IFLA_IFNAME not found".to_string(),
+        ))
     }
 }
 
@@ -285,13 +288,19 @@ fn parse(
 }
 
 /// Parse `tc` queueing disciplines and classes for the corresponding Netlink messages.
-fn tc_stats(messages: Vec<NetlinkMessage<RtnlMessage>>, opts: &OpenOptions) -> Result<Vec<Tc>, Error> {
+fn tc_stats(
+    messages: Vec<NetlinkMessage<RtnlMessage>>,
+    opts: &OpenOptions,
+) -> Result<Vec<Tc>, Error> {
     let messages = parse(messages, opts)?;
     tc::tc_stats(messages, opts)
 }
 
 /// Parse `link` messages for the corresponding Netlink messages
-fn links(messages: Vec<NetlinkMessage<RtnlMessage>>, opts: &OpenOptions) -> Result<Vec<Link>, Error> {
+fn links(
+    messages: Vec<NetlinkMessage<RtnlMessage>>,
+    opts: &OpenOptions,
+) -> Result<Vec<Link>, Error> {
     let messages = parse(messages, opts)?;
     link::links(messages)
 }

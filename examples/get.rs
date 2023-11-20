@@ -7,15 +7,11 @@ use netlink_tc::OpenOptions;
 
 fn socket() -> Socket {
     let socket = Socket::new(NETLINK_ROUTE).unwrap();
-    socket
-        .connect(&SocketAddr::new(0, 0))
-        .unwrap();
+    socket.connect(&SocketAddr::new(0, 0)).unwrap();
     socket
 }
 
-fn receive_netlink_messages(
-    message: RtnlMessage,
-) -> Vec<NetlinkMessage<RtnlMessage>> {
+fn receive_netlink_messages(message: RtnlMessage) -> Vec<NetlinkMessage<RtnlMessage>> {
     let socket = socket();
     send_request(&socket, message);
 
@@ -80,15 +76,11 @@ fn send_request(socket: &Socket, message: RtnlMessage) {
 
 fn main() {
     let messages = get_qdiscs();
-    let qdiscs = OpenOptions::new()
-        .tc(messages)
-        .unwrap();
+    let qdiscs = OpenOptions::new().tc(messages).unwrap();
     println!("length: {}, qdiscs: {:#?}", qdiscs.len(), qdiscs);
 
     let messages = get_links();
-    let links = OpenOptions::new()
-        .links(messages)
-        .unwrap();
+    let links = OpenOptions::new().links(messages).unwrap();
     println!("length: {}, links: {:#?}", links.len(), links);
 
     let mut messages = Vec::new();
@@ -96,8 +88,6 @@ fn main() {
         let classes = get_classes(link.index as i32);
         messages.extend(classes);
     }
-    let classes = OpenOptions::new()
-        .tc(messages)
-        .unwrap();
+    let classes = OpenOptions::new().tc(messages).unwrap();
     println!("length: {}, classes: {:#?}", classes.len(), classes);
 }

@@ -1,8 +1,8 @@
-use netlink_packet_core::NetlinkHeader;
-use netlink_packet_route::TcMessage;
+use super::*;
 use crate::class::{Htb, HtbGlob, HtbOpt, HtbXstats};
 use crate::qdiscs::{FqCodel, FqCodelXStats};
-use super::*;
+use netlink_packet_core::NetlinkHeader;
+use netlink_packet_route::TcMessage;
 
 use crate::test_data::{get_classes, get_links, get_qdiscs, unknown_qdisc};
 use crate::types::{Class, QDisc, RateSpec, XStats};
@@ -10,9 +10,7 @@ use crate::types::{Class, QDisc, RateSpec, XStats};
 #[test]
 fn test_no_queue() {
     let messages = vec![get_qdiscs()[0].clone()];
-    let stats = OpenOptions::new()
-        .tc(messages)
-        .unwrap();
+    let stats = OpenOptions::new().tc(messages).unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -34,9 +32,7 @@ fn test_no_queue() {
 #[test]
 fn test_mq() {
     let messages = vec![get_qdiscs()[1].clone()];
-    let stats = OpenOptions::new()
-        .tc(messages)
-        .unwrap();
+    let stats = OpenOptions::new().tc(messages).unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -59,9 +55,7 @@ fn test_mq() {
 #[test]
 fn test_fq_codel() {
     let messages = vec![get_qdiscs()[2].clone()];
-    let stats = OpenOptions::new()
-        .tc(messages)
-        .unwrap();
+    let stats = OpenOptions::new().tc(messages).unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -119,9 +113,7 @@ fn test_htb() {
     let qdiscs = get_qdiscs();
     let classes = get_classes();
     let messages = vec![qdiscs[3].clone(), classes[0].clone()];
-    let tc_stats = OpenOptions::new()
-        .tc(messages)
-        .unwrap();
+    let tc_stats = OpenOptions::new().tc(messages).unwrap();
 
     let tc = tc_stats.get(0).unwrap();
     // message
@@ -209,9 +201,7 @@ fn test_htb() {
 
 #[test]
 fn test_links() {
-    let links = OpenOptions::new()
-        .links(get_links())
-        .unwrap();
+    let links = OpenOptions::new().links(get_links()).unwrap();
 
     assert_eq!(links[0].index, 1);
     assert_eq!(links[0].name, "eth0");
@@ -219,14 +209,10 @@ fn test_links() {
 
 #[test]
 fn test_unknown_netlink_msg_fail() {
-    let messages = vec![
-        NetlinkMessage::new(
-            NetlinkHeader::default(),
-            NetlinkPayload::InnerMessage(RtnlMessage::DelQueueDiscipline(
-                TcMessage::default(),
-            )),
-        )
-    ];
+    let messages = vec![NetlinkMessage::new(
+        NetlinkHeader::default(),
+        NetlinkPayload::InnerMessage(RtnlMessage::DelQueueDiscipline(TcMessage::default())),
+    )];
     let stats = OpenOptions::new()
         .fail_on_unknown_netlink_message(true)
         .tc(messages);
@@ -247,9 +233,7 @@ fn test_unknown_attribute_fail() {
 #[test]
 fn test_unknown_option_fail() {
     let messages = vec![unknown_qdisc()];
-    let stats = OpenOptions::new()
-        .fail_on_unknown_option(true)
-        .tc(messages);
+    let stats = OpenOptions::new().fail_on_unknown_option(true).tc(messages);
 
     assert!(stats.is_err());
 }
