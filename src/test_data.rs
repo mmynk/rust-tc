@@ -319,3 +319,71 @@ pub fn get_links() -> Vec<NetlinkMessage<RtnlMessage>> {
         })
         .collect()
 }
+
+//noinspection DuplicatedCode
+pub fn unknown_qdisc() -> NetlinkMessage<RtnlMessage> {
+    let header = NlTcHeader {
+        family: 0,
+        index: 2,
+        handle: 0,
+        parent: 1,
+        info: 1,
+    };
+    let nlas = vec![
+        tc::nlas::Nla::Kind("unknown".to_string()),
+        tc::nlas::Nla::Options(vec![
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(1, vec![135, 19, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(2, vec![0, 40, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(3, vec![159, 134, 1, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(4, vec![1, 0, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(6, vec![234, 5, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(8, vec![64, 0, 0, 0])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(9, vec![0, 0, 0, 2])),
+            tc::nlas::TcOpt::Other(nla::DefaultNla::new(5, vec![0, 4, 0, 0])),
+        ]),
+        tc::nlas::Nla::HwOffload(0),
+        tc::nlas::Nla::Stats2(vec![
+            tc::nlas::Stats2::StatsApp(vec![
+                0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ]),
+            tc::nlas::Stats2::StatsBasic(vec![
+                76, 222, 96, 2, 0, 0, 0, 0, // bytes
+                55, 135, 2, 0, // packets
+                0, 0, 0, 0, // padding
+            ]),
+            tc::nlas::Stats2::StatsQueue(vec![
+                0, 0, 0, 0, // qlen
+                0, 0, 0, 0, // backlog
+                0, 0, 0, 0, // drops
+                0, 0, 0, 0, // requeues
+                7, 0, 0, 0, // overlimits
+            ]),
+        ]),
+        tc::nlas::Nla::Stats({
+            let buf = [
+                76, 222, 96, 2, 0, 0, 0, 0, // bytes
+                55, 135, 2, 0, // packets
+                0, 0, 0, 0, // drops
+                0, 0, 0, 0, // overlimits
+                0, 0, 0, 0, // bps
+                0, 0, 0, 0, // pps
+                0, 0, 0, 0, // qlen
+                0, 0, 0, 0, // backlog
+            ];
+            let stats_buf = tc::nlas::StatsBuffer::new(&buf);
+            tc::nlas::Stats::parse(&stats_buf).unwrap()
+        }),
+        tc::nlas::Nla::XStats(vec![
+            0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]),
+    ];
+
+    NetlinkMessage::new(
+        NetlinkHeader::default(),
+        NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(
+            TcMessage::from_parts(header, nlas),
+        )),
+    )
+}

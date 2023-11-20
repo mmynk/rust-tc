@@ -1,8 +1,10 @@
+use netlink_packet_core::NetlinkHeader;
+use netlink_packet_route::TcMessage;
 use crate::class::{Htb, HtbGlob, HtbOpt, HtbXstats};
 use crate::qdiscs::{FqCodel, FqCodelXStats};
 use super::*;
 
-use crate::test_data::{get_classes, get_links, get_qdiscs};
+use crate::test_data::{get_classes, get_links, get_qdiscs, unknown_qdisc};
 use crate::types::{Class, QDisc, RateSpec, XStats};
 
 #[test]
@@ -213,4 +215,41 @@ fn test_links() {
 
     assert_eq!(links[0].index, 1);
     assert_eq!(links[0].name, "eth0");
+}
+
+#[test]
+fn test_unknown_netlink_msg_fail() {
+    let messages = vec![
+        NetlinkMessage::new(
+            NetlinkHeader::default(),
+            NetlinkPayload::InnerMessage(RtnlMessage::DelQueueDiscipline(
+                TcMessage::default(),
+            )),
+        )
+    ];
+    let stats = OpenOptions::new()
+        .fail_on_unknown_netlink_message(true)
+        .tc(messages);
+
+    assert!(stats.is_err());
+}
+
+#[test]
+fn test_unknown_attribute_fail() {
+    let messages = vec![get_qdiscs()[0].clone()];
+    let stats = OpenOptions::new()
+        .fail_on_unknown_attribute(true)
+        .tc(messages);
+
+    assert!(stats.is_err());
+}
+
+#[test]
+fn test_unknown_option_fail() {
+    let messages = vec![unknown_qdisc()];
+    let stats = OpenOptions::new()
+        .fail_on_unknown_option(true)
+        .tc(messages);
+
+    assert!(stats.is_err());
 }
