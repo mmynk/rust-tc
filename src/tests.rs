@@ -1,11 +1,12 @@
-use super::*;
-use crate::class::{Htb, HtbGlob, HtbOpt, HtbXstats};
-use crate::qdiscs::{FqCodel, FqCodelXStats};
 use netlink_packet_core::NetlinkHeader;
 use netlink_packet_route::TcMessage;
 
-use crate::test_data::{get_classes, get_links, get_qdiscs, unknown_qdisc};
+use crate::class::{Htb, HtbGlob, HtbOpt, HtbXstats};
+use crate::qdiscs::{FqCodel, FqCodelXStats};
+use crate::test_data::{get_classes, get_links, get_qdiscs, nlas, qdisc};
 use crate::types::{Class, QDisc, RateSpec, XStats};
+
+use super::*;
 
 #[test]
 fn test_no_queue() {
@@ -222,17 +223,50 @@ fn test_unknown_netlink_msg_fail() {
 
 #[test]
 fn test_unknown_attribute_fail() {
-    let messages = vec![get_qdiscs()[0].clone()];
+    // hwoffload not implemented
+    let tc_message = qdisc("fq_codel");
+    let messages = NetlinkMessage::new(
+        NetlinkHeader::default(),
+        NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(tc_message)),
+    );
     let stats = OpenOptions::new()
         .fail_on_unknown_attribute(true)
-        .tc(messages);
+        .tc(vec![messages]);
 
-    assert!(stats.is_err());
+    assert!(matches!(
+        stats.unwrap_err(),
+        Error::UnimplementedAttribute(_)
+    ));
+}
+
+#[test]
+fn test_stats_parse_fail() {
+    use netlink_packet_route::tc;
+
+    let kind = "fq_codel";
+    let mut tc_message = qdisc(kind);
+    let mut nlas = nlas(kind);
+    // mess up the stats
+    nlas[3] = tc::Nla::Stats2(vec![
+        tc::nlas::Stats2::StatsBasic(vec![1, 2, 3, 4]),
+        tc::nlas::Stats2::StatsQueue(vec![1, 2, 3, 4]),
+    ]);
+    tc_message.nlas = nlas;
+    let messages = NetlinkMessage::new(
+        NetlinkHeader::default(),
+        NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(tc_message)),
+    );
+    let tcs = OpenOptions::new().tc(vec![messages]).unwrap();
+    let tc = tcs.get(0).unwrap();
+    assert!(tc.attr.stats2.is_none());
 }
 
 #[test]
 fn test_unknown_option_fail() {
-    let messages = vec![unknown_qdisc()];
+    let messages = vec![NetlinkMessage::new(
+        NetlinkHeader::default(),
+        NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(qdisc("unknown"))),
+    )];
     let stats = OpenOptions::new().fail_on_unknown_option(true).tc(messages);
 
     assert!(stats.is_err());
