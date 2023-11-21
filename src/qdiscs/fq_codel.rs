@@ -105,7 +105,7 @@ fn unmarshal_fq_codel(opts: Vec<TcOption>) -> FqCodel {
 
 fn unmarshal_fq_codel_xstats(bytes: &[u8]) -> Result<FqCodelXStats, Error> {
     if bytes.len() < 40 {
-        return Err(Error::InvalidAttribute(
+        return Err(Error::Parse(
             "FqCodel XStats requires 40 bytes".to_string(),
         ));
     }
@@ -114,9 +114,9 @@ fn unmarshal_fq_codel_xstats(bytes: &[u8]) -> Result<FqCodelXStats, Error> {
         .map_err(|_| Error::Parse("Failed to extract FqCodel XStats kind".to_string()))?;
     let kind = u32::from_ne_bytes(buf);
     if kind == 0 {
-        bincode::deserialize(&bytes[4..]).map_err(Error::UnmarshalStruct)
+        bincode::deserialize(&bytes[4..]).map_err(|e| TcError::Parse(e.to_string()))
     } else {
-        Err(Error::InvalidAttribute(format!(
+        Err(Error::Parse(format!(
             "FqCodel XStats has unidentified kind: {kind}"
         )))
     }

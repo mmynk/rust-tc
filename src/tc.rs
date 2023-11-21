@@ -27,7 +27,7 @@ fn get_qdiscs(message: TcMsg, classful: bool, opts: &OpenOptions) -> Result<Tc, 
             TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
             _ => {
                 if opts.fail_on_unknown_attribute {
-                    return Err(Error::UnimplementedAttribute(format!(
+                    return Err(Error::Parse(format!(
                         "Attribute {:?} not implemented",
                         attr
                     )));
@@ -73,8 +73,8 @@ pub fn tc_stats(messages: Vec<RtNetlinkMessage>, opts: &OpenOptions) -> Result<V
     Ok(tcs)
 }
 
-fn parse_stats(bytes: &[u8]) -> Result<Stats, Error> {
-    bincode::deserialize(bytes).map_err(Error::UnmarshalStruct)
+fn parse_stats(bytes: &[u8]) -> Result<Stats, TcError> {
+    bincode::deserialize(bytes).map_err(|e| TcError::Parse(e.to_string()))
 }
 
 fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, Error> {
@@ -117,7 +117,7 @@ fn parse_qdiscs(
         HTB => Htb::new(tc_opts).init.map(QDisc::Htb),
         _ => {
             if opts.fail_on_unknown_option {
-                return Err(Error::UnimplementedAttribute(format!(
+                return Err(Error::Parse(format!(
                     "QDisc {kind} not implemented",
                 )));
             } else {
@@ -137,7 +137,7 @@ fn parse_classes(
         HTB => Some(Class::Htb(Htb::new(tc_opts))),
         _ => {
             if opts.fail_on_unknown_option {
-                return Err(Error::UnimplementedAttribute(format!(
+                return Err(Error::Parse(format!(
                     "Class {kind} not implemented",
                 )));
             } else {
@@ -154,7 +154,7 @@ fn parse_xstats(kind: &str, bytes: &[u8], opts: &OpenOptions) -> Result<Option<X
         HTB => HtbXstats::new(bytes).ok().map(XStats::Htb),
         _ => {
             if opts.fail_on_unknown_option {
-                return Err(Error::UnimplementedAttribute(format!(
+                return Err(Error::Parse(format!(
                     "XStats {kind} not implemented",
                 )));
             } else {

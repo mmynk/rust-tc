@@ -235,7 +235,7 @@ fn test_unknown_attribute_fail() {
 
     assert!(matches!(
         stats.unwrap_err(),
-        Error::UnimplementedAttribute(_)
+        Error::Parse(_)
     ));
 }
 

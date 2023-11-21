@@ -148,7 +148,7 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
                         }
                         _ => {
                             if opts.fail_on_unknown_option {
-                                return Err(Error::UnimplementedAttribute(format!(
+                                return Err(Error::Parse(format!(
                                     "Option {:?} not implemented",
                                     opt
                                 )));
@@ -178,7 +178,7 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
                         }
                         _ => {
                             if opts.fail_on_unknown_attribute {
-                                return Err(Error::UnimplementedAttribute(format!(
+                                return Err(Error::Parse(format!(
                                     "Stats2 {:?} not implemented",
                                     stat
                                 )));
@@ -196,7 +196,7 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
             netlink_tc::Nla::HwOffload(byte) => attrs.push(TcAttr::HwOffload(byte)),
             _ => {
                 if opts.fail_on_unknown_attribute {
-                    return Err(Error::UnimplementedAttribute(format!(
+                    return Err(Error::Parse(format!(
                         "Attribute {:?} not implemented",
                         nla
                     )));
@@ -230,7 +230,7 @@ fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, Error> {
         let attr = LinkAttr { name: if_name };
         Ok(LinkMsg { header, attr })
     } else {
-        Err(Error::MissingAttribute(
+        Err(Error::Parse(
             "Attribute IFLA_IFNAME not found".to_string(),
         ))
     }
@@ -254,7 +254,7 @@ fn parse(
             }
             payload => {
                 if opts.fail_on_unknown_netlink_message {
-                    return Err(Error::UnknownNetlinkMessage(payload.message_type()));
+                    return Err(Error::Parse(format!("Unknown netlink message type: {}", payload.message_type())));
                 }
             }
         }

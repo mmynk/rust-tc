@@ -135,14 +135,14 @@ fn unmarshal_htb(opts: Vec<TcOption>) -> Htb {
     htb
 }
 
-fn unmarshal_htb_opt(bytes: &[u8]) -> Result<HtbOpt, Error> {
-    bincode::deserialize(bytes).map_err(Error::UnmarshalStruct)
+fn unmarshal_htb_opt(bytes: &[u8]) -> Result<HtbOpt, TcError> {
+    bincode::deserialize(bytes).map_err(|e| TcError::Parse(e.to_string()))
 }
 
-fn unmarshal_htb_glob(bytes: &[u8]) -> Result<HtbGlob, Error> {
-    bincode::deserialize(bytes).map_err(Error::UnmarshalStruct)
+fn unmarshal_htb_glob(bytes: &[u8]) -> Result<HtbGlob, TcError> {
+    bincode::deserialize(bytes).map_err(|e| TcError::Parse(e.to_string()))
 }
 
-fn unmarshal_htb_xstats(bytes: &[u8]) -> Result<HtbXstats, Error> {
-    bincode::deserialize(bytes).map_err(Error::UnmarshalStruct)
+fn unmarshal_htb_xstats(bytes: &[u8]) -> Result<HtbXstats, TcError> {
+    bincode::deserialize(bytes).map_err(|e| TcError::Parse(e.to_string()))
 }
