@@ -64,7 +64,7 @@ fn test_mq() {
 #[test]
 fn test_fq_codel() {
     let messages = vec![get_qdiscs()[2].clone()];
-    let stats = ParseOptions::new()
+    let stats = ParseOptions::default()
         .fail_on_unknown_attribute(false)
         .fail_on_unknown_option(false)
         .tc(messages)

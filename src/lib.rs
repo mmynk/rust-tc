@@ -66,6 +66,12 @@ pub struct ParseOptions {
     fail_on_unknown_option: bool,
 }
 
+impl Default for ParseOptions {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ParseOptions {
     /// Creates a new set of options with all flags set to false.
     /// By default, the call fails on unknown netlink messages, attributes or options.
