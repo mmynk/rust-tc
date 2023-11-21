@@ -117,9 +117,7 @@ fn parse_qdiscs(
         HTB => Htb::new(tc_opts).init.map(QDisc::Htb),
         _ => {
             if opts.fail_on_unknown_option {
-                return Err(TcError::Parse(format!(
-                    "QDisc {kind} not implemented",
-                )));
+                return Err(TcError::Parse(format!("QDisc {kind} not implemented",)));
             } else {
                 None
             }
@@ -137,9 +135,7 @@ fn parse_classes(
         HTB => Some(Class::Htb(Htb::new(tc_opts))),
         _ => {
             if opts.fail_on_unknown_option {
-                return Err(TcError::Parse(format!(
-                    "Class {kind} not implemented",
-                )));
+                return Err(TcError::Parse(format!("Class {kind} not implemented",)));
             } else {
                 None
             }
@@ -154,9 +150,7 @@ fn parse_xstats(kind: &str, bytes: &[u8], opts: &ParseOptions) -> Result<Option<
         HTB => HtbXstats::new(bytes).ok().map(XStats::Htb),
         _ => {
             if opts.fail_on_unknown_option {
-                return Err(TcError::Parse(format!(
-                    "XStats {kind} not implemented",
-                )));
+                return Err(TcError::Parse(format!("XStats {kind} not implemented",)));
             } else {
                 None
             }

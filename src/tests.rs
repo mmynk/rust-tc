@@ -233,10 +233,7 @@ fn test_unknown_attribute_fail() {
         .fail_on_unknown_attribute(true)
         .tc(vec![messages]);
 
-    assert!(matches!(
-        stats.unwrap_err(),
-        TcError::Parse(_)
-    ));
+    assert!(matches!(stats.unwrap_err(), TcError::Parse(_)));
 }
 
 #[test]
@@ -267,7 +264,9 @@ fn test_unknown_option_fail() {
         NetlinkHeader::default(),
         NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(qdisc("unknown"))),
     )];
-    let stats = ParseOptions::new().fail_on_unknown_option(true).tc(messages);
+    let stats = ParseOptions::new()
+        .fail_on_unknown_option(true)
+        .tc(messages);
 
     assert!(stats.is_err());
 }

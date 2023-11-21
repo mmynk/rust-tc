@@ -254,7 +254,10 @@ fn parse(
             }
             payload => {
                 if opts.fail_on_unknown_netlink_message {
-                    return Err(TcError::Parse(format!("Unknown netlink message type: {}", payload.message_type())));
+                    return Err(TcError::Parse(format!(
+                        "Unknown netlink message type: {}",
+                        payload.message_type()
+                    )));
                 }
             }
         }
