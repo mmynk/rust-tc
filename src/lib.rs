@@ -68,7 +68,11 @@ pub struct ParseOptions {
 impl ParseOptions {
     /// Creates a new set of options with all flags set to false.
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            fail_on_unknown_netlink_message: false,
+            fail_on_unknown_attribute: false,
+            fail_on_unknown_option: false,
+        }
     }
 
     /// Sets the `fail_on_unknown_netlink_message` flag.
