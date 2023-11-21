@@ -47,9 +47,9 @@ fn get_qdiscs() -> Vec<NetlinkMessage<RtnlMessage>> {
     receive_netlink_messages(RtnlMessage::GetQueueDiscipline(TcMessage::default()))
 }
 
-fn get_classes(index: u32) -> Vec<NetlinkMessage<RtnlMessage>> {
+fn get_classes(index: i32) -> Vec<NetlinkMessage<RtnlMessage>> {
     let header = TcHeader {
-        index: index as i32,
+        index,
         ..Default::default()
     };
     let mut message = TcMessage::default();
@@ -74,25 +74,16 @@ fn send_request(socket: &Socket, message: RtnlMessage) {
     socket.send(&buf[..], 0).unwrap();
 }
 
-#[test]
-fn test_qdiscs() {
+fn main() {
     let messages = get_qdiscs();
-    let tcs = ParseOptions::new()
+    let qdiscs = ParseOptions::new()
         .fail_on_unknown_netlink_message(false)
         .fail_on_unknown_attribute(false)
         .fail_on_unknown_option(false)
         .tc(messages)
         .unwrap();
-    for tc in tcs {
-        let attr = tc.attr;
-        assert!(!attr.kind.is_empty());
-        assert!(attr.stats.is_some());
-        assert!(attr.stats2.is_some());
-    }
-}
+    println!("length: {}, qdiscs: {:#?}", qdiscs.len(), qdiscs);
 
-#[test]
-fn test_link_classes() {
     let messages = get_links();
     let links = ParseOptions::new()
         .fail_on_unknown_netlink_message(false)
@@ -100,16 +91,18 @@ fn test_link_classes() {
         .fail_on_unknown_option(false)
         .links(messages)
         .unwrap();
+    println!("length: {}, links: {:#?}", links.len(), links);
 
-    assert!(!links.is_empty());
-
+    let mut messages = Vec::new();
     for link in links {
-        let messages = get_classes(link.index);
-        let classes = ParseOptions::new()
-            .fail_on_unknown_netlink_message(false)
-            .fail_on_unknown_attribute(false)
-            .fail_on_unknown_option(false)
-            .tc(messages);
-        assert!(classes.is_ok());
+        let classes = get_classes(link.index as i32);
+        messages.extend(classes);
     }
+    let classes = ParseOptions::new()
+        .fail_on_unknown_netlink_message(false)
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
+    println!("length: {}, classes: {:#?}", classes.len(), classes);
 }

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::TcError, Clsact, FqCodel, FqCodelXStats, Htb, HtbGlob, HtbXstats};
+use crate::class::{Htb, HtbGlob, HtbXstats};
+use crate::errors::Error;
+use crate::qdiscs::{Clsact, FqCodel, FqCodelXStats};
 
 /// This struct is an intermediate representation for netlink `tc` messages.
 /// Any downstream structs should be constructed into this struct.
@@ -150,8 +152,8 @@ pub struct RateSpec {
     pub rate: u32,
 }
 
-pub fn unmarshal_rate_spec(buf: &[u8]) -> Result<RateSpec, TcError> {
-    bincode::deserialize(buf).map_err(TcError::UnmarshalStruct)
+pub fn unmarshal_rate_spec(buf: &[u8]) -> Result<RateSpec, Error> {
+    bincode::deserialize(buf).map_err(|e| Error::Parse(e.to_string()))
 }
 
 /// A subset of structs defined in `include/uapi/linux/if_link.h`.

@@ -1,33 +1,21 @@
-use crate::{errors::NetlinkError, netlink::NetlinkConnection};
+use netlink_packet_core::NetlinkHeader;
+use netlink_packet_route::TcMessage;
+
+use crate::class::{Htb, HtbGlob, HtbOpt, HtbXstats};
+use crate::qdiscs::{FqCodel, FqCodelXStats};
+use crate::test_data::{get_classes, get_links, get_qdiscs, nlas, qdisc};
+use crate::types::{Class, QDisc, RateSpec, XStats};
 
 use super::*;
 
-struct MockNetlink {}
-
-impl NetlinkConnection for MockNetlink {
-    fn new() -> Result<Self, NetlinkError>
-    where
-        Self: Sized,
-    {
-        Ok(MockNetlink {})
-    }
-
-    fn qdiscs(&self) -> Result<Vec<TcMsg>, NetlinkError> {
-        Ok(test_data::qdiscs())
-    }
-
-    fn classes(&self, _: i32) -> Result<Vec<TcMsg>, NetlinkError> {
-        Ok(test_data::classes())
-    }
-
-    fn links(&self) -> Result<Vec<LinkMsg>, NetlinkError> {
-        Ok(test_data::links())
-    }
-}
-
 #[test]
 fn test_no_queue() {
-    let stats = qdiscs::<MockNetlink>().unwrap();
+    let messages = vec![get_qdiscs()[0].clone()];
+    let stats = ParseOptions::new()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -48,9 +36,14 @@ fn test_no_queue() {
 
 #[test]
 fn test_mq() {
-    let stats = qdiscs::<MockNetlink>().unwrap();
+    let messages = vec![get_qdiscs()[1].clone()];
+    let stats = ParseOptions::new()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
 
-    let tc = stats.get(1).unwrap();
+    let tc = stats.get(0).unwrap();
     // message
     assert_eq!(tc.msg.index, 2);
     assert_eq!(tc.msg.handle, 0);
@@ -70,9 +63,14 @@ fn test_mq() {
 
 #[test]
 fn test_fq_codel() {
-    let stats = qdiscs::<MockNetlink>().unwrap();
+    let messages = vec![get_qdiscs()[2].clone()];
+    let stats = ParseOptions::default()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
 
-    let tc = stats.get(2).unwrap();
+    let tc = stats.get(0).unwrap();
     // message
     assert_eq!(tc.msg.index, 2);
     assert_eq!(tc.msg.handle, 0);
@@ -125,9 +123,16 @@ fn test_fq_codel() {
 
 #[test]
 fn test_htb() {
-    let tc_stats = tc_stats::<MockNetlink>().unwrap();
+    let qdiscs = get_qdiscs();
+    let classes = get_classes();
+    let messages = vec![qdiscs[3].clone(), classes[0].clone()];
+    let tc_stats = ParseOptions::new()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
 
-    let tc = tc_stats.get(3).unwrap();
+    let tc = tc_stats.get(0).unwrap();
     // message
     assert_eq!(tc.msg.index, 3);
     assert_eq!(tc.msg.handle, 65536);
@@ -155,7 +160,7 @@ fn test_htb() {
         })
     );
 
-    let tc = tc_stats.get(4).unwrap();
+    let tc = tc_stats.get(1).unwrap();
     // message
     assert_eq!(tc.msg.index, 3);
     assert_eq!(tc.msg.handle, 65537);
@@ -209,4 +214,79 @@ fn test_htb() {
             ctokens: 200000,
         })
     );
+}
+
+#[test]
+fn test_links() {
+    let links = ParseOptions::new().links(get_links()).unwrap();
+
+    assert_eq!(links[0].index, 1);
+    assert_eq!(links[0].name, "eth0");
+}
+
+#[test]
+fn test_unknown_netlink_msg_fail() {
+    let messages = vec![NetlinkMessage::new(
+        NetlinkHeader::default(),
+        NetlinkPayload::InnerMessage(RtnlMessage::DelQueueDiscipline(TcMessage::default())),
+    )];
+    let stats = ParseOptions::new()
+        .fail_on_unknown_netlink_message(true)
+        .tc(messages);
+
+    assert!(stats.is_err());
+}
+
+#[test]
+fn test_unknown_attribute_fail() {
+    // hwoffload not implemented
+    let tc_message = qdisc("fq_codel");
+    let messages = NetlinkMessage::new(
+        NetlinkHeader::default(),
+        NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(tc_message)),
+    );
+    let stats = ParseOptions::new()
+        .fail_on_unknown_attribute(true)
+        .tc(vec![messages]);
+
+    assert!(matches!(stats.unwrap_err(), Error::Parse(_)));
+}
+
+#[test]
+fn test_stats_parse_fail() {
+    use netlink_packet_route::tc;
+
+    let kind = "fq_codel";
+    let mut tc_message = qdisc(kind);
+    let mut nlas = nlas(kind);
+    // mess up the stats
+    nlas[3] = tc::Nla::Stats2(vec![
+        tc::nlas::Stats2::StatsBasic(vec![1, 2, 3, 4]),
+        tc::nlas::Stats2::StatsQueue(vec![1, 2, 3, 4]),
+    ]);
+    tc_message.nlas = nlas;
+    let messages = NetlinkMessage::new(
+        NetlinkHeader::default(),
+        NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(tc_message)),
+    );
+    let tcs = ParseOptions::new()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(vec![messages])
+        .unwrap();
+    let tc = tcs.get(0).unwrap();
+    assert!(tc.attr.stats2.is_none());
+}
+
+#[test]
+fn test_unknown_option_fail() {
+    let messages = vec![NetlinkMessage::new(
+        NetlinkHeader::default(),
+        NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(qdisc("unknown"))),
+    )];
+    let stats = ParseOptions::new()
+        .fail_on_unknown_option(true)
+        .tc(messages);
+
+    assert!(stats.is_err());
 }
