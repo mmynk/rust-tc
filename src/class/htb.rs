@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::TcError, types::*};
+use crate::{errors::Error, types::*};
 
 /// Defined in `include/uapi/linux/pkt_sched.h`.
 #[derive(Default, Debug, PartialEq)]
@@ -83,7 +83,7 @@ impl Htb {
 }
 
 impl HtbXstats {
-    pub fn new(bytes: &[u8]) -> Result<Self, TcError> {
+    pub fn new(bytes: &[u8]) -> Result<Self, Error> {
         unmarshal_htb_xstats(bytes)
     }
 }
@@ -135,14 +135,14 @@ fn unmarshal_htb(opts: Vec<TcOption>) -> Htb {
     htb
 }
 
-fn unmarshal_htb_opt(bytes: &[u8]) -> Result<HtbOpt, TcError> {
-    bincode::deserialize(bytes).map_err(|e| TcError::Parse(e.to_string()))
+fn unmarshal_htb_opt(bytes: &[u8]) -> Result<HtbOpt, Error> {
+    bincode::deserialize(bytes).map_err(|e| Error::Parse(e.to_string()))
 }
 
-fn unmarshal_htb_glob(bytes: &[u8]) -> Result<HtbGlob, TcError> {
-    bincode::deserialize(bytes).map_err(|e| TcError::Parse(e.to_string()))
+fn unmarshal_htb_glob(bytes: &[u8]) -> Result<HtbGlob, Error> {
+    bincode::deserialize(bytes).map_err(|e| Error::Parse(e.to_string()))
 }
 
-fn unmarshal_htb_xstats(bytes: &[u8]) -> Result<HtbXstats, TcError> {
-    bincode::deserialize(bytes).map_err(|e| TcError::Parse(e.to_string()))
+fn unmarshal_htb_xstats(bytes: &[u8]) -> Result<HtbXstats, Error> {
+    bincode::deserialize(bytes).map_err(|e| Error::Parse(e.to_string()))
 }

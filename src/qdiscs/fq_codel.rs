@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::TcError, TcOption};
+use crate::{errors::Error, TcOption};
 
 /// Defined in `include/uapi/linux/sch_fq_codel.c`.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -37,7 +37,7 @@ pub struct FqCodelXStats {
 }
 
 impl FqCodelXStats {
-    pub fn new(bytes: &[u8]) -> Result<Self, TcError> {
+    pub fn new(bytes: &[u8]) -> Result<Self, Error> {
         unmarshal_fq_codel_xstats(bytes)
     }
 }
@@ -103,20 +103,18 @@ fn unmarshal_fq_codel(opts: Vec<TcOption>) -> FqCodel {
     fq
 }
 
-fn unmarshal_fq_codel_xstats(bytes: &[u8]) -> Result<FqCodelXStats, TcError> {
+fn unmarshal_fq_codel_xstats(bytes: &[u8]) -> Result<FqCodelXStats, Error> {
     if bytes.len() < 40 {
-        return Err(TcError::Parse(
-            "FqCodel XStats requires 40 bytes".to_string(),
-        ));
+        return Err(Error::Parse("FqCodel XStats requires 40 bytes".to_string()));
     }
     let buf: [u8; 4] = bytes[..4]
         .try_into()
-        .map_err(|_| TcError::Parse("Failed to extract FqCodel XStats kind".to_string()))?;
+        .map_err(|_| Error::Parse("Failed to extract FqCodel XStats kind".to_string()))?;
     let kind = u32::from_ne_bytes(buf);
     if kind == 0 {
-        bincode::deserialize(&bytes[4..]).map_err(|e| TcError::Parse(e.to_string()))
+        bincode::deserialize(&bytes[4..]).map_err(|e| Error::Parse(e.to_string()))
     } else {
-        Err(TcError::Parse(format!(
+        Err(Error::Parse(format!(
             "FqCodel XStats has unidentified kind: {kind}"
         )))
     }

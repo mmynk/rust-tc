@@ -233,7 +233,7 @@ fn test_unknown_attribute_fail() {
         .fail_on_unknown_attribute(true)
         .tc(vec![messages]);
 
-    assert!(matches!(stats.unwrap_err(), TcError::Parse(_)));
+    assert!(matches!(stats.unwrap_err(), Error::Parse(_)));
 }
 
 #[test]
