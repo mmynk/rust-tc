@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::Error, types::*};
+use crate::{errors::TcError, types::*};
 
 /// Defined in `include/uapi/linux/pkt_sched.h`.
 #[derive(Default, Debug, PartialEq)]
@@ -83,7 +83,7 @@ impl Htb {
 }
 
 impl HtbXstats {
-    pub fn new(bytes: &[u8]) -> Result<Self, Error> {
+    pub fn new(bytes: &[u8]) -> Result<Self, TcError> {
         unmarshal_htb_xstats(bytes)
     }
 }

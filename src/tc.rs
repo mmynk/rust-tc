@@ -1,6 +1,6 @@
 use crate::class::{Htb, HtbXstats};
 use crate::constants::{CLSACT, FQ_CODEL, HTB};
-use crate::errors::Error;
+use crate::errors::TcError;
 use crate::qdiscs::{Clsact, FqCodel, FqCodelXStats};
 use crate::types::{
     Attribute, Class, QDisc, Stats, Stats2, Tc, TcAttr, TcMessage, TcMsg, TcOption, TcStats2,
@@ -8,7 +8,7 @@ use crate::types::{
 };
 use crate::{OpenOptions, RtNetlinkMessage};
 
-fn get_qdiscs(message: TcMsg, classful: bool, opts: &OpenOptions) -> Result<Tc, Error> {
+fn get_qdiscs(message: TcMsg, classful: bool, opts: &OpenOptions) -> Result<Tc, TcError> {
     let tc = TcMessage {
         index: message.header.index as u32,
         handle: message.header.handle,
@@ -27,7 +27,7 @@ fn get_qdiscs(message: TcMsg, classful: bool, opts: &OpenOptions) -> Result<Tc, 
             TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
             _ => {
                 if opts.fail_on_unknown_attribute {
-                    return Err(Error::Parse(format!(
+                    return Err(TcError::Parse(format!(
                         "Attribute {:?} not implemented",
                         attr
                     )));
@@ -50,16 +50,16 @@ fn get_qdiscs(message: TcMsg, classful: bool, opts: &OpenOptions) -> Result<Tc, 
 }
 
 /// `qdiscs` returns a list of queuing disciplines by parsing the passed `TcMsg` vector.
-pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
+pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, TcError> {
     get_qdiscs(message, false, opts)
 }
 
 /// `classes` returns a list of traffic control classes by parsing the passed `TcMsg` vector.
-pub fn classes(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
+pub fn classes(message: TcMsg, opts: &OpenOptions) -> Result<Tc, TcError> {
     get_qdiscs(message, true, opts)
 }
 
-pub fn tc_stats(messages: Vec<RtNetlinkMessage>, opts: &OpenOptions) -> Result<Vec<Tc>, Error> {
+pub fn tc_stats(messages: Vec<RtNetlinkMessage>, opts: &OpenOptions) -> Result<Vec<Tc>, TcError> {
     let mut tcs = Vec::with_capacity(messages.len());
 
     for message in messages {
@@ -77,7 +77,7 @@ fn parse_stats(bytes: &[u8]) -> Result<Stats, TcError> {
     bincode::deserialize(bytes).map_err(|e| TcError::Parse(e.to_string()))
 }
 
-fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, Error> {
+fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
     let mut stats = Stats2::default();
     let mut errors = Vec::new();
     for stat in stats2 {
@@ -98,7 +98,7 @@ fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, Error> {
 
     if !errors.is_empty() {
         let message = errors.join(", ");
-        Err(Error::Parse(format!(
+        Err(TcError::Parse(format!(
             "Failed to unmarshal structs: {message}"
         )))
     } else {
@@ -110,14 +110,14 @@ fn parse_qdiscs(
     kind: &str,
     tc_opts: Vec<TcOption>,
     opts: &OpenOptions,
-) -> Result<Option<QDisc>, Error> {
+) -> Result<Option<QDisc>, TcError> {
     let qdisc = match kind {
         FQ_CODEL => Some(QDisc::FqCodel(FqCodel::new(tc_opts))),
         CLSACT => Some(QDisc::Clsact(Clsact {})),
         HTB => Htb::new(tc_opts).init.map(QDisc::Htb),
         _ => {
             if opts.fail_on_unknown_option {
-                return Err(Error::Parse(format!(
+                return Err(TcError::Parse(format!(
                     "QDisc {kind} not implemented",
                 )));
             } else {
@@ -132,12 +132,12 @@ fn parse_classes(
     kind: &str,
     tc_opts: Vec<TcOption>,
     opts: &OpenOptions,
-) -> Result<Option<Class>, Error> {
+) -> Result<Option<Class>, TcError> {
     let class = match kind {
         HTB => Some(Class::Htb(Htb::new(tc_opts))),
         _ => {
             if opts.fail_on_unknown_option {
-                return Err(Error::Parse(format!(
+                return Err(TcError::Parse(format!(
                     "Class {kind} not implemented",
                 )));
             } else {
@@ -148,13 +148,13 @@ fn parse_classes(
     Ok(class)
 }
 
-fn parse_xstats(kind: &str, bytes: &[u8], opts: &OpenOptions) -> Result<Option<XStats>, Error> {
+fn parse_xstats(kind: &str, bytes: &[u8], opts: &OpenOptions) -> Result<Option<XStats>, TcError> {
     let xstats = match kind {
         FQ_CODEL => FqCodelXStats::new(bytes).ok().map(XStats::FqCodel),
         HTB => HtbXstats::new(bytes).ok().map(XStats::Htb),
         _ => {
             if opts.fail_on_unknown_option {
-                return Err(Error::Parse(format!(
+                return Err(TcError::Parse(format!(
                     "XStats {kind} not implemented",
                 )));
             } else {

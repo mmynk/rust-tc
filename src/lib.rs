@@ -31,7 +31,7 @@ use netlink_packet_route::{
 };
 use netlink_packet_utils::{nla::Nla, Emitable};
 
-use errors::Error;
+use errors::TcError;
 use types::{Link, LinkAttr, LinkHeader, LinkMsg, Tc, TcAttr, TcHeader, TcMsg, TcOption, TcStats2};
 
 pub mod errors;
@@ -106,18 +106,18 @@ impl OpenOptions {
     ///     .fail_on_unknown_option(true)
     ///     .tc(vec![]); // init with netlink messages
     /// ```
-    pub fn tc(&self, messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Tc>, Error> {
+    pub fn tc(&self, messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Tc>, TcError> {
         tc_stats(messages, self)
     }
 
     /// Parses `link` messages for the corresponding Netlink messages
     /// with the options specified by `self`.
-    pub fn links(&self, messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Link>, Error> {
+    pub fn links(&self, messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Link>, TcError> {
         links(messages, self)
     }
 }
 
-fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
+fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, TcError> {
     let NlTcMessage {
         header: tc_header,
         nlas,
@@ -148,7 +148,7 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
                         }
                         _ => {
                             if opts.fail_on_unknown_option {
-                                return Err(Error::Parse(format!(
+                                return Err(TcError::Parse(format!(
                                     "Option {:?} not implemented",
                                     opt
                                 )));
@@ -178,7 +178,7 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
                         }
                         _ => {
                             if opts.fail_on_unknown_attribute {
-                                return Err(Error::Parse(format!(
+                                return Err(TcError::Parse(format!(
                                     "Stats2 {:?} not implemented",
                                     stat
                                 )));
@@ -196,7 +196,7 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
             netlink_tc::Nla::HwOffload(byte) => attrs.push(TcAttr::HwOffload(byte)),
             _ => {
                 if opts.fail_on_unknown_attribute {
-                    return Err(Error::Parse(format!(
+                    return Err(TcError::Parse(format!(
                         "Attribute {:?} not implemented",
                         nla
                     )));
@@ -208,7 +208,7 @@ fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, Error> {
     Ok(TcMsg { header, attrs })
 }
 
-fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, Error> {
+fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, TcError> {
     let NlLinkMessage {
         header: link_header,
         nlas,
@@ -230,7 +230,7 @@ fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, Error> {
         let attr = LinkAttr { name: if_name };
         Ok(LinkMsg { header, attr })
     } else {
-        Err(Error::Parse(
+        Err(TcError::Parse(
             "Attribute IFLA_IFNAME not found".to_string(),
         ))
     }
@@ -239,7 +239,7 @@ fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, Error> {
 fn parse(
     messages: Vec<NetlinkMessage<RtnlMessage>>,
     opts: &OpenOptions,
-) -> Result<Vec<RtNetlinkMessage>, Error> {
+) -> Result<Vec<RtNetlinkMessage>, TcError> {
     let mut tc_messages = Vec::new();
     for message in messages {
         match message.payload {
@@ -254,7 +254,7 @@ fn parse(
             }
             payload => {
                 if opts.fail_on_unknown_netlink_message {
-                    return Err(Error::Parse(format!("Unknown netlink message type: {}", payload.message_type())));
+                    return Err(TcError::Parse(format!("Unknown netlink message type: {}", payload.message_type())));
                 }
             }
         }
@@ -266,7 +266,7 @@ fn parse(
 fn tc_stats(
     messages: Vec<NetlinkMessage<RtnlMessage>>,
     opts: &OpenOptions,
-) -> Result<Vec<Tc>, Error> {
+) -> Result<Vec<Tc>, TcError> {
     let messages = parse(messages, opts)?;
     tc::tc_stats(messages, opts)
 }
@@ -275,7 +275,7 @@ fn tc_stats(
 fn links(
     messages: Vec<NetlinkMessage<RtnlMessage>>,
     opts: &OpenOptions,
-) -> Result<Vec<Link>, Error> {
+) -> Result<Vec<Link>, TcError> {
     let messages = parse(messages, opts)?;
     link::links(messages)
 }
