@@ -1,9 +1,13 @@
 use netlink_packet_core::{
     NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP, NLM_F_REQUEST,
 };
-use netlink_packet_route::{LinkMessage, RtnlMessage, TcHeader, TcMessage};
+use netlink_packet_route::{RtnlMessage, TcHeader, TcMessage};
 use netlink_sys::{protocols::NETLINK_ROUTE, Socket, SocketAddr};
 use netlink_tc::ParseOptions;
+use nix::ifaddrs::getifaddrs;
+use nix::net::if_::if_nametoindex;
+use std::collections::BTreeSet;
+use std::ffi::OsStr;
 
 fn socket() -> Socket {
     let socket = Socket::new(NETLINK_ROUTE).unwrap();
@@ -57,10 +61,6 @@ fn get_classes(index: i32) -> Vec<NetlinkMessage<RtnlMessage>> {
     receive_netlink_messages(RtnlMessage::GetTrafficClass(message))
 }
 
-fn get_links() -> Vec<NetlinkMessage<RtnlMessage>> {
-    receive_netlink_messages(RtnlMessage::GetLink(LinkMessage::default()))
-}
-
 fn send_request(socket: &Socket, message: RtnlMessage) {
     let mut nl_hdr = NetlinkHeader::default();
     nl_hdr.flags = NLM_F_REQUEST | NLM_F_DUMP;
@@ -74,6 +74,23 @@ fn send_request(socket: &Socket, message: RtnlMessage) {
     socket.send(&buf[..], 0).unwrap();
 }
 
+fn get_links() -> BTreeSet<i32> {
+    if let Ok(addrs) = getifaddrs() {
+        addrs
+            .filter(|ifaddr| ifaddr.flags.contains(nix::net::if_::InterfaceFlags::IFF_UP))
+            .filter_map(|ifaddr| {
+                if let Ok(index) = if_nametoindex::<OsStr>(ifaddr.interface_name.as_ref()) {
+                    Some(index as i32)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    } else {
+        BTreeSet::new()
+    }
+}
+
 fn main() {
     let messages = get_qdiscs();
     let qdiscs = ParseOptions::new()
@@ -84,18 +101,12 @@ fn main() {
         .unwrap();
     println!("length: {}, qdiscs: {:#?}", qdiscs.len(), qdiscs);
 
-    let messages = get_links();
-    let links = ParseOptions::new()
-        .fail_on_unknown_netlink_message(false)
-        .fail_on_unknown_attribute(false)
-        .fail_on_unknown_option(false)
-        .links(messages)
-        .unwrap();
+    let links = get_links();
     println!("length: {}, links: {:#?}", links.len(), links);
 
     let mut messages = Vec::new();
     for link in links {
-        let classes = get_classes(link.index as i32);
+        let classes = get_classes(link);
         messages.extend(classes);
     }
     let classes = ParseOptions::new()

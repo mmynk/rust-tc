@@ -1,6 +1,6 @@
 use netlink_packet_core::{NetlinkHeader, NetlinkMessage, NetlinkPayload};
 use netlink_packet_route::tc::Nla;
-use netlink_packet_route::{nlas, tc, LinkMessage, RtnlMessage, TcHeader as NlTcHeader, TcMessage};
+use netlink_packet_route::{tc, RtnlMessage, TcHeader as NlTcHeader, TcMessage};
 use netlink_packet_utils::{nla, Parseable};
 
 pub fn nl_qdiscs() -> Vec<TcMessage> {
@@ -220,13 +220,6 @@ pub fn nl_classes() -> Vec<TcMessage> {
     messages
 }
 
-pub fn nl_links() -> Vec<LinkMessage> {
-    let mut msg = LinkMessage::default();
-    msg.header.index = 1;
-    msg.nlas = vec![nlas::link::Nla::IfName("eth0".to_string())];
-    vec![msg]
-}
-
 pub fn get_qdiscs() -> Vec<NetlinkMessage<RtnlMessage>> {
     nl_qdiscs()
         .into_iter()
@@ -246,18 +239,6 @@ pub fn get_classes() -> Vec<NetlinkMessage<RtnlMessage>> {
             NetlinkMessage::new(
                 NetlinkHeader::default(),
                 NetlinkPayload::InnerMessage(RtnlMessage::NewTrafficClass(class)),
-            )
-        })
-        .collect()
-}
-
-pub fn get_links() -> Vec<NetlinkMessage<RtnlMessage>> {
-    nl_links()
-        .into_iter()
-        .map(|link| {
-            NetlinkMessage::new(
-                NetlinkHeader::default(),
-                NetlinkPayload::InnerMessage(RtnlMessage::NewLink(link)),
             )
         })
         .collect()

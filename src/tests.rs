@@ -3,7 +3,7 @@ use netlink_packet_route::TcMessage;
 
 use crate::class::{Htb, HtbGlob, HtbOpt, HtbXstats};
 use crate::qdiscs::{FqCodel, FqCodelXStats};
-use crate::test_data::{get_classes, get_links, get_qdiscs, nlas, qdisc};
+use crate::test_data::{get_classes, get_qdiscs, nlas, qdisc};
 use crate::types::{Class, QDisc, RateSpec, XStats};
 
 use super::*;
@@ -214,14 +214,6 @@ fn test_htb() {
             ctokens: 200000,
         })
     );
-}
-
-#[test]
-fn test_links() {
-    let links = ParseOptions::new().links(get_links()).unwrap();
-
-    assert_eq!(links[0].index, 1);
-    assert_eq!(links[0].name, "eth0");
 }
 
 #[test]
