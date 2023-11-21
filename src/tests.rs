@@ -11,7 +11,11 @@ use super::*;
 #[test]
 fn test_no_queue() {
     let messages = vec![get_qdiscs()[0].clone()];
-    let stats = ParseOptions::new().tc(messages).unwrap();
+    let stats = ParseOptions::new()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -33,7 +37,11 @@ fn test_no_queue() {
 #[test]
 fn test_mq() {
     let messages = vec![get_qdiscs()[1].clone()];
-    let stats = ParseOptions::new().tc(messages).unwrap();
+    let stats = ParseOptions::new()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -56,7 +64,11 @@ fn test_mq() {
 #[test]
 fn test_fq_codel() {
     let messages = vec![get_qdiscs()[2].clone()];
-    let stats = ParseOptions::new().tc(messages).unwrap();
+    let stats = ParseOptions::new()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -114,7 +126,11 @@ fn test_htb() {
     let qdiscs = get_qdiscs();
     let classes = get_classes();
     let messages = vec![qdiscs[3].clone(), classes[0].clone()];
-    let tc_stats = ParseOptions::new().tc(messages).unwrap();
+    let tc_stats = ParseOptions::new()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
 
     let tc = tc_stats.get(0).unwrap();
     // message
@@ -253,7 +269,10 @@ fn test_stats_parse_fail() {
         NetlinkHeader::default(),
         NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(tc_message)),
     );
-    let tcs = ParseOptions::new().tc(vec![messages]).unwrap();
+    let tcs = ParseOptions::new()
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(vec![messages]).unwrap();
     let tc = tcs.get(0).unwrap();
     assert!(tc.attr.stats2.is_none());
 }

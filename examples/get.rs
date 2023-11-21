@@ -76,11 +76,19 @@ fn send_request(socket: &Socket, message: RtnlMessage) {
 
 fn main() {
     let messages = get_qdiscs();
-    let qdiscs = ParseOptions::new().tc(messages).unwrap();
+    let qdiscs = ParseOptions::new()
+        .fail_on_unknown_netlink_message(false)
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages).unwrap();
     println!("length: {}, qdiscs: {:#?}", qdiscs.len(), qdiscs);
 
     let messages = get_links();
-    let links = ParseOptions::new().links(messages).unwrap();
+    let links = ParseOptions::new()
+        .fail_on_unknown_netlink_message(false)
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .links(messages).unwrap();
     println!("length: {}, links: {:#?}", links.len(), links);
 
     let mut messages = Vec::new();
@@ -88,6 +96,10 @@ fn main() {
         let classes = get_classes(link.index as i32);
         messages.extend(classes);
     }
-    let classes = ParseOptions::new().tc(messages).unwrap();
+    let classes = ParseOptions::new()
+        .fail_on_unknown_netlink_message(false)
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages).unwrap();
     println!("length: {}, classes: {:#?}", classes.len(), classes);
 }

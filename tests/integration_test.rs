@@ -77,7 +77,12 @@ fn send_request(socket: &Socket, message: RtnlMessage) {
 #[test]
 fn test_qdiscs() {
     let messages = get_qdiscs();
-    let tcs = ParseOptions::new().tc(messages).unwrap();
+    let tcs = ParseOptions::new()
+        .fail_on_unknown_netlink_message(false)
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages)
+        .unwrap();
     for tc in tcs {
         let attr = tc.attr;
         assert!(!attr.kind.is_empty());
@@ -89,13 +94,22 @@ fn test_qdiscs() {
 #[test]
 fn test_link_classes() {
     let messages = get_links();
-    let links = ParseOptions::new().links(messages).unwrap();
+    let links = ParseOptions::new()
+        .fail_on_unknown_netlink_message(false)
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .links(messages)
+        .unwrap();
 
     assert!(!links.is_empty());
 
     for link in links {
         let messages = get_classes(link.index);
-        let classes = ParseOptions::new().tc(messages);
+        let classes = ParseOptions::new()
+            .fail_on_unknown_netlink_message(false)
+            .fail_on_unknown_attribute(false)
+            .fail_on_unknown_option(false)
+            .tc(messages);
         assert!(classes.is_ok());
     }
 }
