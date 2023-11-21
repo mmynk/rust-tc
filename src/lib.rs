@@ -20,27 +20,19 @@
 //!     .fail_on_unknown_attribute(false)
 //!     .fail_on_unknown_option(false)
 //!     .tc(messages.clone()).unwrap();
-//!
-//! // Get list of links
-//! let links = ParseOptions::new()
-//!     .links(messages.clone()).unwrap();
 //! ```
 use netlink_packet_core::{NetlinkMessage, NetlinkPayload};
-use netlink_packet_route::{
-    link as netlink_link, tc as netlink_tc, LinkMessage as NlLinkMessage, RtnlMessage,
-    TcMessage as NlTcMessage,
-};
+use netlink_packet_route::{tc as netlink_tc, RtnlMessage, TcMessage as NlTcMessage};
 use netlink_packet_utils::{nla::Nla, Emitable};
 
 use errors::Error;
-use types::{Link, LinkAttr, LinkHeader, LinkMsg, Tc, TcAttr, TcHeader, TcMsg, TcOption, TcStats2};
+use types::{Tc, TcAttr, TcHeader, TcMsg, TcOption, TcStats2};
 
 pub mod errors;
 pub mod types;
 
 mod class;
 mod constants;
-mod link;
 mod qdiscs;
 mod tc;
 
@@ -52,9 +44,8 @@ mod tests;
 /// Possible message types for `tc` messages.
 /// A subset of `rtnl::RtnlMessage` enum.
 pub enum RtNetlinkMessage {
-    GetQdisc(TcMsg),  /* RTM_GETQDISC */
-    GetClass(TcMsg),  /* RTM_GETCLASS */
-    GetLink(LinkMsg), /* RTM_GETLINK */
+    GetQdisc(TcMsg), /* RTM_GETQDISC */
+    GetClass(TcMsg), /* RTM_GETCLASS */
 }
 
 /// `OpenOptions` provides options for controlling how `netlink-tc` parses netlink messages.
@@ -123,12 +114,6 @@ impl ParseOptions {
     /// ```
     pub fn tc(&self, messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Tc>, Error> {
         tc_stats(messages, self)
-    }
-
-    /// Parses `link` messages for the corresponding Netlink messages
-    /// with the options specified by `self`.
-    pub fn links(&self, messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Link>, Error> {
-        links(messages, self)
     }
 }
 
@@ -220,32 +205,6 @@ fn to_tc(tc_message: NlTcMessage, opts: &ParseOptions) -> Result<TcMsg, Error> {
     Ok(TcMsg { header, attrs })
 }
 
-fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, Error> {
-    let NlLinkMessage {
-        header: link_header,
-        nlas,
-        ..
-    } = link_message;
-    let header = LinkHeader {
-        index: link_header.index,
-    };
-
-    let mut name = None;
-    for nla in nlas {
-        if let netlink_link::nlas::Nla::IfName(if_name) = nla {
-            name = Some(if_name);
-            break;
-        }
-    }
-
-    if let Some(if_name) = name {
-        let attr = LinkAttr { name: if_name };
-        Ok(LinkMsg { header, attr })
-    } else {
-        Err(Error::Parse("Attribute IFLA_IFNAME not found".to_string()))
-    }
-}
-
 fn parse(
     messages: Vec<NetlinkMessage<RtnlMessage>>,
     opts: &ParseOptions,
@@ -258,9 +217,6 @@ fn parse(
             }
             NetlinkPayload::InnerMessage(RtnlMessage::NewTrafficClass(message)) => {
                 tc_messages.push(RtNetlinkMessage::GetClass(to_tc(message.clone(), opts)?))
-            }
-            NetlinkPayload::InnerMessage(RtnlMessage::NewLink(message)) => {
-                tc_messages.push(RtNetlinkMessage::GetLink(to_link(message.clone())?))
             }
             payload => {
                 if opts.fail_on_unknown_netlink_message {
@@ -282,13 +238,4 @@ fn tc_stats(
 ) -> Result<Vec<Tc>, Error> {
     let messages = parse(messages, opts)?;
     tc::tc_stats(messages, opts)
-}
-
-/// Parse `link` messages for the corresponding Netlink messages
-fn links(
-    messages: Vec<NetlinkMessage<RtnlMessage>>,
-    opts: &ParseOptions,
-) -> Result<Vec<Link>, Error> {
-    let messages = parse(messages, opts)?;
-    link::links(messages)
 }

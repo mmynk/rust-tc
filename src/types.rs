@@ -48,24 +48,6 @@ pub enum TcStats2 {
     StatsApp(Vec<u8>),
 }
 
-/// This struct is an intermediate representation for netlink `link` messages.
-/// Any downstream structs should be constructed into this struct.
-#[derive(Debug)]
-pub struct LinkMsg {
-    pub header: LinkHeader,
-    pub attr: LinkAttr,
-}
-
-#[derive(Debug)]
-pub struct LinkHeader {
-    pub index: u32,
-}
-
-#[derive(Debug)]
-pub struct LinkAttr {
-    pub name: String,
-}
-
 #[derive(Debug, Default)]
 pub struct Tc {
     pub msg: TcMessage,
@@ -154,11 +136,4 @@ pub struct RateSpec {
 
 pub fn unmarshal_rate_spec(buf: &[u8]) -> Result<RateSpec, Error> {
     bincode::deserialize(buf).map_err(|e| Error::Parse(e.to_string()))
-}
-
-/// A subset of structs defined in `include/uapi/linux/if_link.h`.
-#[derive(Debug)]
-pub struct Link {
-    pub index: u32,
-    pub name: String,
 }
