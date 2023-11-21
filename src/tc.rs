@@ -8,8 +8,7 @@ use crate::types::{
 };
 use crate::{OpenOptions, RtNetlinkMessage};
 
-/// `qdiscs` returns a list of queuing disciplines by parsing the passed `TcMsg` vector.
-pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
+fn get_qdiscs(message: TcMsg, classful: bool, opts: &OpenOptions) -> Result<Tc, Error> {
     let tc = TcMessage {
         index: message.header.index as u32,
         handle: message.header.handle,
@@ -37,7 +36,11 @@ pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
         }
     }
 
-    attribute.qdisc = parse_qdiscs(attribute.kind.as_str(), tc_opts, opts)?;
+    if classful {
+        attribute.class = parse_classes(attribute.kind.as_str(), tc_opts, opts)?;
+    } else {
+        attribute.qdisc = parse_qdiscs(attribute.kind.as_str(), tc_opts, opts)?;
+    }
     attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice(), opts)?;
 
     Ok(Tc {
@@ -46,42 +49,14 @@ pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
     })
 }
 
+/// `qdiscs` returns a list of queuing disciplines by parsing the passed `TcMsg` vector.
+pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
+    get_qdiscs(message, false, opts)
+}
+
 /// `classes` returns a list of traffic control classes by parsing the passed `TcMsg` vector.
 pub fn classes(message: TcMsg, opts: &OpenOptions) -> Result<Tc, Error> {
-    let tc = TcMessage {
-        index: message.header.index as u32,
-        handle: message.header.handle,
-        parent: message.header.parent,
-    };
-    let mut attribute = Attribute::default();
-
-    let mut tc_opts = vec![];
-    let mut xstats = Vec::new();
-    for attr in &message.attrs {
-        match attr {
-            TcAttr::Kind(kind) => attribute.kind = kind.to_string(),
-            TcAttr::Options(options) => tc_opts = options.to_vec(),
-            TcAttr::Stats(bytes) => attribute.stats = parse_stats(bytes).ok(),
-            TcAttr::Xstats(bytes) => xstats.extend(bytes.as_slice()),
-            TcAttr::Stats2(stats) => attribute.stats2 = parse_stats2(stats).ok(),
-            _ => {
-                if opts.fail_on_unknown_attribute {
-                    return Err(Error::UnimplementedAttribute(format!(
-                        "Attribute {:?} not implemented",
-                        attr
-                    )));
-                }
-            }
-        }
-    }
-
-    attribute.class = parse_classes(attribute.kind.as_str(), tc_opts, opts)?;
-    attribute.xstats = parse_xstats(attribute.kind.as_str(), xstats.as_slice(), opts)?;
-
-    Ok(Tc {
-        msg: tc,
-        attr: attribute,
-    })
+    get_qdiscs(message, true, opts)
 }
 
 pub fn tc_stats(messages: Vec<RtNetlinkMessage>, opts: &OpenOptions) -> Result<Vec<Tc>, Error> {
