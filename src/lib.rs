@@ -9,19 +9,19 @@
 //! ```rust
 //! use netlink_packet_core::NetlinkMessage;
 //! use netlink_packet_route::RtnlMessage;
-//! use netlink_tc::OpenOptions;
+//! use netlink_tc::ParseOptions;
 //!
 //! // Retrieve netlink messages using `netlink-packet-route`.
 //! // See `examples` for more details.
 //! let messages: Vec<NetlinkMessage<RtnlMessage>> = vec![]; // init with netlink messages
 //!
 //! // Get list of tc qdiscs or classes
-//! let qdiscs = OpenOptions::new()
+//! let qdiscs = ParseOptions::new()
 //!     .fail_on_unknown_netlink_message(true)
 //!     .tc(messages.clone()).unwrap();
 //!
 //! // Get list of links
-//! let links = OpenOptions::new()
+//! let links = ParseOptions::new()
 //!     .links(messages.clone()).unwrap();
 //! ```
 use netlink_packet_core::{NetlinkMessage, NetlinkPayload};
@@ -59,13 +59,13 @@ pub enum RtNetlinkMessage {
 /// `OpenOptions` provides options for controlling how `netlink-tc` parses netlink messages.
 /// By default, unknown attributes and options are ignored.
 #[derive(Debug, Default)]
-pub struct OpenOptions {
+pub struct ParseOptions {
     fail_on_unknown_netlink_message: bool,
     fail_on_unknown_attribute: bool,
     fail_on_unknown_option: bool,
 }
 
-impl OpenOptions {
+impl ParseOptions {
     /// Creates a new set of options with all flags set to false.
     pub fn new() -> Self {
         Self::default()
@@ -98,9 +98,9 @@ impl OpenOptions {
     ///
     /// # Example
     /// ```no_run
-    /// use netlink_tc::OpenOptions;
+    /// use netlink_tc::ParseOptions;
     ///
-    /// let queues = OpenOptions::new()
+    /// let queues = ParseOptions::new()
     ///     .fail_on_unknown_netlink_message(true)
     ///     .fail_on_unknown_attribute(true)
     ///     .fail_on_unknown_option(true)
@@ -117,7 +117,7 @@ impl OpenOptions {
     }
 }
 
-fn to_tc(tc_message: NlTcMessage, opts: &OpenOptions) -> Result<TcMsg, TcError> {
+fn to_tc(tc_message: NlTcMessage, opts: &ParseOptions) -> Result<TcMsg, TcError> {
     let NlTcMessage {
         header: tc_header,
         nlas,
@@ -238,7 +238,7 @@ fn to_link(link_message: NlLinkMessage) -> Result<LinkMsg, TcError> {
 
 fn parse(
     messages: Vec<NetlinkMessage<RtnlMessage>>,
-    opts: &OpenOptions,
+    opts: &ParseOptions,
 ) -> Result<Vec<RtNetlinkMessage>, TcError> {
     let mut tc_messages = Vec::new();
     for message in messages {
@@ -265,7 +265,7 @@ fn parse(
 /// Parse `tc` queueing disciplines and classes for the corresponding Netlink messages.
 fn tc_stats(
     messages: Vec<NetlinkMessage<RtnlMessage>>,
-    opts: &OpenOptions,
+    opts: &ParseOptions,
 ) -> Result<Vec<Tc>, TcError> {
     let messages = parse(messages, opts)?;
     tc::tc_stats(messages, opts)
@@ -274,7 +274,7 @@ fn tc_stats(
 /// Parse `link` messages for the corresponding Netlink messages
 fn links(
     messages: Vec<NetlinkMessage<RtnlMessage>>,
-    opts: &OpenOptions,
+    opts: &ParseOptions,
 ) -> Result<Vec<Link>, TcError> {
     let messages = parse(messages, opts)?;
     link::links(messages)

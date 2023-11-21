@@ -11,7 +11,7 @@ use super::*;
 #[test]
 fn test_no_queue() {
     let messages = vec![get_qdiscs()[0].clone()];
-    let stats = OpenOptions::new().tc(messages).unwrap();
+    let stats = ParseOptions::new().tc(messages).unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -33,7 +33,7 @@ fn test_no_queue() {
 #[test]
 fn test_mq() {
     let messages = vec![get_qdiscs()[1].clone()];
-    let stats = OpenOptions::new().tc(messages).unwrap();
+    let stats = ParseOptions::new().tc(messages).unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -56,7 +56,7 @@ fn test_mq() {
 #[test]
 fn test_fq_codel() {
     let messages = vec![get_qdiscs()[2].clone()];
-    let stats = OpenOptions::new().tc(messages).unwrap();
+    let stats = ParseOptions::new().tc(messages).unwrap();
 
     let tc = stats.get(0).unwrap();
     // message
@@ -114,7 +114,7 @@ fn test_htb() {
     let qdiscs = get_qdiscs();
     let classes = get_classes();
     let messages = vec![qdiscs[3].clone(), classes[0].clone()];
-    let tc_stats = OpenOptions::new().tc(messages).unwrap();
+    let tc_stats = ParseOptions::new().tc(messages).unwrap();
 
     let tc = tc_stats.get(0).unwrap();
     // message
@@ -202,7 +202,7 @@ fn test_htb() {
 
 #[test]
 fn test_links() {
-    let links = OpenOptions::new().links(get_links()).unwrap();
+    let links = ParseOptions::new().links(get_links()).unwrap();
 
     assert_eq!(links[0].index, 1);
     assert_eq!(links[0].name, "eth0");
@@ -214,7 +214,7 @@ fn test_unknown_netlink_msg_fail() {
         NetlinkHeader::default(),
         NetlinkPayload::InnerMessage(RtnlMessage::DelQueueDiscipline(TcMessage::default())),
     )];
-    let stats = OpenOptions::new()
+    let stats = ParseOptions::new()
         .fail_on_unknown_netlink_message(true)
         .tc(messages);
 
@@ -229,7 +229,7 @@ fn test_unknown_attribute_fail() {
         NetlinkHeader::default(),
         NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(tc_message)),
     );
-    let stats = OpenOptions::new()
+    let stats = ParseOptions::new()
         .fail_on_unknown_attribute(true)
         .tc(vec![messages]);
 
@@ -256,7 +256,7 @@ fn test_stats_parse_fail() {
         NetlinkHeader::default(),
         NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(tc_message)),
     );
-    let tcs = OpenOptions::new().tc(vec![messages]).unwrap();
+    let tcs = ParseOptions::new().tc(vec![messages]).unwrap();
     let tc = tcs.get(0).unwrap();
     assert!(tc.attr.stats2.is_none());
 }
@@ -267,7 +267,7 @@ fn test_unknown_option_fail() {
         NetlinkHeader::default(),
         NetlinkPayload::InnerMessage(RtnlMessage::NewQueueDiscipline(qdisc("unknown"))),
     )];
-    let stats = OpenOptions::new().fail_on_unknown_option(true).tc(messages);
+    let stats = ParseOptions::new().fail_on_unknown_option(true).tc(messages);
 
     assert!(stats.is_err());
 }

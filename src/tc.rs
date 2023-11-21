@@ -6,9 +6,9 @@ use crate::types::{
     Attribute, Class, QDisc, Stats, Stats2, Tc, TcAttr, TcMessage, TcMsg, TcOption, TcStats2,
     XStats,
 };
-use crate::{OpenOptions, RtNetlinkMessage};
+use crate::{ParseOptions, RtNetlinkMessage};
 
-fn get_qdiscs(message: TcMsg, classful: bool, opts: &OpenOptions) -> Result<Tc, TcError> {
+fn get_qdiscs(message: TcMsg, classful: bool, opts: &ParseOptions) -> Result<Tc, TcError> {
     let tc = TcMessage {
         index: message.header.index as u32,
         handle: message.header.handle,
@@ -50,16 +50,16 @@ fn get_qdiscs(message: TcMsg, classful: bool, opts: &OpenOptions) -> Result<Tc, 
 }
 
 /// `qdiscs` returns a list of queuing disciplines by parsing the passed `TcMsg` vector.
-pub fn qdiscs(message: TcMsg, opts: &OpenOptions) -> Result<Tc, TcError> {
+pub fn qdiscs(message: TcMsg, opts: &ParseOptions) -> Result<Tc, TcError> {
     get_qdiscs(message, false, opts)
 }
 
 /// `classes` returns a list of traffic control classes by parsing the passed `TcMsg` vector.
-pub fn classes(message: TcMsg, opts: &OpenOptions) -> Result<Tc, TcError> {
+pub fn classes(message: TcMsg, opts: &ParseOptions) -> Result<Tc, TcError> {
     get_qdiscs(message, true, opts)
 }
 
-pub fn tc_stats(messages: Vec<RtNetlinkMessage>, opts: &OpenOptions) -> Result<Vec<Tc>, TcError> {
+pub fn tc_stats(messages: Vec<RtNetlinkMessage>, opts: &ParseOptions) -> Result<Vec<Tc>, TcError> {
     let mut tcs = Vec::with_capacity(messages.len());
 
     for message in messages {
@@ -109,7 +109,7 @@ fn parse_stats2(stats2: &Vec<TcStats2>) -> Result<Stats2, TcError> {
 fn parse_qdiscs(
     kind: &str,
     tc_opts: Vec<TcOption>,
-    opts: &OpenOptions,
+    opts: &ParseOptions,
 ) -> Result<Option<QDisc>, TcError> {
     let qdisc = match kind {
         FQ_CODEL => Some(QDisc::FqCodel(FqCodel::new(tc_opts))),
@@ -131,7 +131,7 @@ fn parse_qdiscs(
 fn parse_classes(
     kind: &str,
     tc_opts: Vec<TcOption>,
-    opts: &OpenOptions,
+    opts: &ParseOptions,
 ) -> Result<Option<Class>, TcError> {
     let class = match kind {
         HTB => Some(Class::Htb(Htb::new(tc_opts))),
@@ -148,7 +148,7 @@ fn parse_classes(
     Ok(class)
 }
 
-fn parse_xstats(kind: &str, bytes: &[u8], opts: &OpenOptions) -> Result<Option<XStats>, TcError> {
+fn parse_xstats(kind: &str, bytes: &[u8], opts: &ParseOptions) -> Result<Option<XStats>, TcError> {
     let xstats = match kind {
         FQ_CODEL => FqCodelXStats::new(bytes).ok().map(XStats::FqCodel),
         HTB => HtbXstats::new(bytes).ok().map(XStats::Htb),

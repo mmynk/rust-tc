@@ -3,7 +3,7 @@ use netlink_packet_core::{
 };
 use netlink_packet_route::{LinkMessage, RtnlMessage, TcHeader, TcMessage};
 use netlink_sys::{protocols::NETLINK_ROUTE, Socket, SocketAddr};
-use netlink_tc::OpenOptions;
+use netlink_tc::ParseOptions;
 
 fn socket() -> Socket {
     let socket = Socket::new(NETLINK_ROUTE).unwrap();
@@ -77,7 +77,7 @@ fn send_request(socket: &Socket, message: RtnlMessage) {
 #[test]
 fn test_qdiscs() {
     let messages = get_qdiscs();
-    let tcs = OpenOptions::new().tc(messages).unwrap();
+    let tcs = ParseOptions::new().tc(messages).unwrap();
     for tc in tcs {
         let attr = tc.attr;
         assert!(!attr.kind.is_empty());
@@ -89,13 +89,13 @@ fn test_qdiscs() {
 #[test]
 fn test_link_classes() {
     let messages = get_links();
-    let links = OpenOptions::new().links(messages).unwrap();
+    let links = ParseOptions::new().links(messages).unwrap();
 
     assert!(!links.is_empty());
 
     for link in links {
         let messages = get_classes(link.index);
-        let classes = OpenOptions::new().tc(messages);
+        let classes = ParseOptions::new().tc(messages);
         assert!(classes.is_ok());
     }
 }
