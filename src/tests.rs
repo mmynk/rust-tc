@@ -272,7 +272,8 @@ fn test_stats_parse_fail() {
     let tcs = ParseOptions::new()
         .fail_on_unknown_attribute(false)
         .fail_on_unknown_option(false)
-        .tc(vec![messages]).unwrap();
+        .tc(vec![messages])
+        .unwrap();
     let tc = tcs.get(0).unwrap();
     assert!(tc.attr.stats2.is_none());
 }

@@ -80,7 +80,8 @@ fn main() {
         .fail_on_unknown_netlink_message(false)
         .fail_on_unknown_attribute(false)
         .fail_on_unknown_option(false)
-        .tc(messages).unwrap();
+        .tc(messages)
+        .unwrap();
     println!("length: {}, qdiscs: {:#?}", qdiscs.len(), qdiscs);
 
     let messages = get_links();
@@ -88,7 +89,8 @@ fn main() {
         .fail_on_unknown_netlink_message(false)
         .fail_on_unknown_attribute(false)
         .fail_on_unknown_option(false)
-        .links(messages).unwrap();
+        .links(messages)
+        .unwrap();
     println!("length: {}, links: {:#?}", links.len(), links);
 
     let mut messages = Vec::new();
@@ -100,6 +102,7 @@ fn main() {
         .fail_on_unknown_netlink_message(false)
         .fail_on_unknown_attribute(false)
         .fail_on_unknown_option(false)
-        .tc(messages).unwrap();
+        .tc(messages)
+        .unwrap();
     println!("length: {}, classes: {:#?}", classes.len(), classes);
 }
