@@ -17,7 +17,8 @@
 //!
 //! // Get list of tc qdiscs or classes
 //! let qdiscs = ParseOptions::new()
-//!     .fail_on_unknown_netlink_message(true)
+//!     .fail_on_unknown_attribute(false)
+//!     .fail_on_unknown_option(false)
 //!     .tc(messages.clone()).unwrap();
 //!
 //! // Get list of links
@@ -58,7 +59,7 @@ pub enum RtNetlinkMessage {
 
 /// `OpenOptions` provides options for controlling how `netlink-tc` parses netlink messages.
 /// By default, unknown attributes and options are ignored.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ParseOptions {
     fail_on_unknown_netlink_message: bool,
     fail_on_unknown_attribute: bool,
@@ -67,11 +68,15 @@ pub struct ParseOptions {
 
 impl ParseOptions {
     /// Creates a new set of options with all flags set to false.
+    /// By default, the call fails on unknown netlink messages, attributes or options.
+    ///
+    /// NOTE: Using the default options will lead to the calls failing until the library is complete.
+    /// The caller must explicitly set the required options to false until then.
     pub fn new() -> Self {
         Self {
-            fail_on_unknown_netlink_message: false,
-            fail_on_unknown_attribute: false,
-            fail_on_unknown_option: false,
+            fail_on_unknown_netlink_message: true,
+            fail_on_unknown_attribute: true,
+            fail_on_unknown_option: true,
         }
     }
 
@@ -105,9 +110,9 @@ impl ParseOptions {
     /// use netlink_tc::ParseOptions;
     ///
     /// let queues = ParseOptions::new()
-    ///     .fail_on_unknown_netlink_message(true)
-    ///     .fail_on_unknown_attribute(true)
-    ///     .fail_on_unknown_option(true)
+    ///     .fail_on_unknown_netlink_message(false)
+    ///     .fail_on_unknown_attribute(false)
+    ///     .fail_on_unknown_option(false)
     ///     .tc(vec![]); // init with netlink messages
     /// ```
     pub fn tc(&self, messages: Vec<NetlinkMessage<RtnlMessage>>) -> Result<Vec<Tc>, Error> {
