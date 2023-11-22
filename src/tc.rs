@@ -66,7 +66,6 @@ pub fn tc_stats(messages: Vec<RtNetlinkMessage>, opts: &ParseOptions) -> Result<
         match message {
             RtNetlinkMessage::GetQdisc(message) => tcs.push(qdiscs(message, opts)?),
             RtNetlinkMessage::GetClass(message) => tcs.push(classes(message, opts)?),
-            _ => {}
         }
     }
 
