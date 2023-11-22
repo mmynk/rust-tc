@@ -20,3 +20,6 @@ thiserror = "1.0"
 
 [dev-dependencies]
 nix = { version = "0.27", features = ["net"] }
+
+[build-dependencies]
+bindgen = "0.69"
