@@ -19,7 +19,8 @@
 //! let qdiscs = ParseOptions::new()
 //!     .fail_on_unknown_attribute(false)
 //!     .fail_on_unknown_option(false)
-//!     .tc(messages.clone()).unwrap();
+//!     .tc(messages)
+//!     .unwrap();
 //! ```
 use netlink_packet_core::{NetlinkMessage, NetlinkPayload};
 use netlink_packet_route::{tc as netlink_tc, RtnlMessage, TcMessage as NlTcMessage};

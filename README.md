@@ -18,12 +18,10 @@ fn main() {
 
     // Get list of tc qdiscs or classes
     let qdiscs = OpenOptions::new()
-        .fail_on_unknown_netlink_message(true)
-        .tc(messages.clone()).unwrap();
-
-    // Get list of links
-    let links = OpenOptions::new()
-        .links(messages.clone()).unwrap();
+        .fail_on_unknown_attribute(false)
+        .fail_on_unknown_option(false)
+        .tc(messages.clone())
+        .unwrap();
 }
 ```
 
